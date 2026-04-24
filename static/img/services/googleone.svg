@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Google One">
+  <rect width="64" height="64" rx="12" fill="#ffffff"/>
+  <circle cx="32" cy="32" r="16" fill="none" stroke="#4285F4" stroke-width="4" stroke-dasharray="25 75"/>
+  <circle cx="32" cy="32" r="16" fill="none" stroke="#EA4335" stroke-width="4" stroke-dasharray="25 75" transform="rotate(90 32 32)"/>
+  <circle cx="32" cy="32" r="16" fill="none" stroke="#FBBC05" stroke-width="4" stroke-dasharray="25 75" transform="rotate(180 32 32)"/>
+  <circle cx="32" cy="32" r="16" fill="none" stroke="#34A853" stroke-width="4" stroke-dasharray="25 75" transform="rotate(270 32 32)"/>
+  <text x="32" y="37" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#202124">1</text>
+</svg>

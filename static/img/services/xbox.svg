@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Xbox">
+  <rect width="64" height="64" rx="12" fill="#107c10"/>
+  <circle cx="32" cy="32" r="18" fill="#ffffff"/>
+  <path d="M22 24l10 9 10-9M22 40l10-9 10 9" fill="none" stroke="#107c10" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

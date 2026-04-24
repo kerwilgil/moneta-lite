@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Financial Dashboard{% else %}Dashboard financiero{% endif %}{% endblock %}
+{% block section %}Dashboard{% endblock %}
+{% block content %}
+{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<section class="page-heading">
+    <div>
+        <h1>{% if lang_code|slice:':2' == 'en' %}Financial Dashboard{% else %}Panel financiero{% endif %}</h1>
+        <p>{% if lang_code|slice:':2' == 'en' %}Balance, debt, equity and upcoming payments.{% else %}Balance, deuda, capital y pr&oacute;ximos pagos.{% endif %}</p>
+    </div>
+    <div class="heading-actions">
+        <a class="btn btn-light btn-sm" href="{% url 'finanzas:dashboard' %}">{% if lang_code|slice:':2' == 'en' %}This month{% else %}Este mes{% endif %}</a>
+        <button class="btn btn-outline-secondary btn-sm" id="dashboard-refresh" type="button">{% if lang_code|slice:':2' == 'en' %}Refresh{% else %}Actualizar{% endif %}</button>
+    </div>
+</section>
+
+<section class="metric-grid">
+    <article class="metric-card metric-primary">
+        <div>
+            <p>{% if lang_code|slice:':2' == 'en' %}Total balance{% else %}Balance total{% endif %}</p>
+            <h2>${{ assets|floatformat:2 }}</h2>
+            <small>{% if lang_code|slice:':2' == 'en' %}Real assets, excluding card limits{% else %}Activos reales, sin incluir limites de tarjeta{% endif %}</small>
+        </div>
+        <span class="metric-badge positive">{% if lang_code|slice:':2' == 'en' %}Equity{% else %}Capital{% endif %}</span>
+    </article>
+    <article class="metric-card">
+        <div>
+            <p>{% if lang_code|slice:':2' == 'en' %}Monthly income{% else %}Ingresos del mes{% endif %}</p>
+            <h2>${{ income|floatformat:2 }}</h2>
+            <small>{% if lang_code|slice:':2' == 'en' %}Confirmed income and collections{% else %}Ingresos y cobros confirmados{% endif %}</small>
+        </div>
+        <span class="metric-badge">{% if lang_code|slice:':2' == 'en' %}Income{% else %}Ingreso{% endif %}</span>
+    </article>
+    <article class="metric-card">
+        <div>
+            <p>{% if lang_code|slice:':2' == 'en' %}Registered debt{% else %}Deuda registrada{% endif %}</p>
+            <h2>${{ liabilities|floatformat:2 }}</h2>
+            <small>{% if lang_code|slice:':2' == 'en' %}Loans, payables and actual card debt{% else %}Prestamos, cuentas por pagar y deuda real de tarjetas{% endif %}</small>
+        </div>
+        <span class="metric-badge warning">{% if lang_code|slice:':2' == 'en' %}Debt{% else %}Deuda{% endif %}</span>
+    </article>
+</section>
+
+<section class="dashboard-grid" id="dashboardTopGrid">
+    <article class="panel wallet-panel">
+        <div class="panel-header">
+            <div>
+                <h2>{% if lang_code|slice:':2' == 'en' %}My accounts{% else %}Mis cuentas{% endif %}</h2>
+                <p>{% if lang_code|slice:':2' == 'en' %}Assets, liabilities and operating equity.{% else %}Activos, pasivos y capital operativo.{% endif %}</p>
+            </div>
+            <a href="{% url 'finanzas:account_create' %}" class="btn btn-light btn-sm">{% if lang_code|slice:':2' == 'en' %}+ Add{% else %}+ Agregar{% endif %}</a>
+        </div>
+        <div class="account-grid">
+            {% for account in accounts %}
+                <div class="account-tile">
+                    <div class="account-tile-head">
+                        <span class="account-type-badge">{{ account.account_type_icon_ui }}</span>
+                        <small>{{ account.account_type_label_ui }}</small>
+                    </div>
+                    <strong class="account-name">{{ account.display_name_ui }}</strong>
+                    <strong>${{ account.current_balance|floatformat:2 }}</strong>
+                    <span>{{ account.currency }}</span>
+                    {% if account.balance_delta %}
+                    <small class="{% if account.balance_delta < 0 %}budget-negative{% else %}ok{% endif %}">
+                        {% if lang_code|slice:':2' == 'en' %}Variation{% else %}Variacion{% endif %}: ${{ account.balance_delta|floatformat:2 }}
+                    </small>
+                    {% endif %}
+                    <em class="{% if account.is_active %}ok{% else %}muted{% endif %}">
+                        {% if account.is_active %}{% if lang_code|slice:':2' == 'en' %}Active{% else %}Activa{% endif %}{% else %}{% if lang_code|slice:':2' == 'en' %}Inactive{% else %}Inactiva{% endif %}{% endif %}
+                    </em>
+                </div>
+            {% empty %}
+                <div class="empty-state-rich" style="grid-column: 1 / -1;">
+                    <span class="empty-icon" aria-hidden="true">+</span>
+                    <strong>{% if lang_code|slice:':2' == 'en' %}No accounts yet{% else %}A&uacute;n no hay cuentas{% endif %}</strong>
+                    <p>{% if lang_code|slice:':2' == 'en' %}Create your initial accounts to start tracking balance and cash flow.{% else %}Crea tus cuentas iniciales para comenzar a seguir balance y flujo de caja.{% endif %}</p>
+                    <a class="btn btn-success btn-sm" href="{% url 'finanzas:account_create' %}">{% if lang_code|slice:':2' == 'en' %}+ Add account{% else %}+ Agregar cuenta{% endif %}</a>
+                </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel chart-panel">
+        <div class="panel-header">
+            <div>
+                <h2>{% if lang_code|slice:':2' == 'en' %}Cash flow trend{% else %}Tendencia de flujo{% endif %}</h2>
+                <p>${{ cash_flow|floatformat:2 }}</p>
+            </div>
+            <label class="chart-size-control" for="chartHeightControl">
+                <span>{% if lang_code|slice:':2' == 'en' %}Chart size{% else %}Tama&ntilde;o gr&aacute;fica{% endif %}</span>
+                <input id="chartHeightControl" type="range" min="220" max="560" value="420">
+            </label>
+        </div>
+        <div class="chart-frame">
+            <canvas id="cashFlowChart"></canvas>
+        </div>
+    </article>
+</section>
+
+<section class="panel compact-panel">
+    <div class="panel-header">
+        <div>
+            <h2>{% if lang_code|slice:':2' == 'en' %}Upcoming commitments{% else %}Compromisos pr&oacute;ximos{% endif %}</h2>
+            <p>{% if lang_code|slice:':2' == 'en' %}Recurring items and subscriptions due soon.{% else %}Recurrentes y suscripciones por vencer pronto.{% endif %}</p>
+        </div>
+        <a class="btn btn-light btn-sm" href="{% url 'finanzas:recurring_list' %}">{% if lang_code|slice:':2' == 'en' %}Manage{% else %}Gestionar{% endif %}</a>
+    </div>
+    <div class="upcoming-grid">
+        {% for payment in upcoming %}
+            <article class="upcoming-card">
+                <div class="upcoming-card-head">
+                    <strong>{{ payment.name }}</strong>
+                    <span class="metric-badge {% if payment.is_subscription %}warning{% else %}positive{% endif %}">
+                        {% if payment.is_subscription %}{% if lang_code|slice:':2' == 'en' %}Subscription{% else %}Suscripci&oacute;n{% endif %}{% else %}{% if lang_code|slice:':2' == 'en' %}Recurring{% else %}Recurrente{% endif %}{% endif %}
+                    </span>
+                </div>
+                <span>{{ payment.account.display_name_ui }} &middot; {{ payment.frequency_label_ui }}</span>
+                <strong>${{ payment.amount|floatformat:2 }}</strong>
+                <small>{% if lang_code|slice:':2' == 'en' %}Due{% else %}Vence{% endif %}: {{ payment.next_due_date }}</small>
+            </article>
+        {% empty %}
+            <div class="empty-state-rich" style="grid-column: 1 / -1;">
+                <span class="empty-icon" aria-hidden="true">&#10003;</span>
+                <strong>{% if lang_code|slice:':2' == 'en' %}No upcoming commitments{% else %}Sin compromisos pr&oacute;ximos{% endif %}</strong>
+                <p>{% if lang_code|slice:':2' == 'en' %}You have no recurring or subscription payments due soon.{% else %}No tienes pagos recurrentes o suscripciones por vencer pronto.{% endif %}</p>
+                <a class="btn btn-light btn-sm" href="{% url 'finanzas:recurring_list' %}">{% if lang_code|slice:':2' == 'en' %}Manage recurring{% else %}Gestionar recurrentes{% endif %}</a>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="panel compact-panel net-income-panel">
+    <div class="panel-header net-income-header">
+        <div>
+            <h2>{% if lang_code|slice:':2' == 'en' %}Monthly net income{% else %}Ingreso neto mensual{% endif %}</h2>
+            <p>{% if lang_code|slice:':2' == 'en' %}Use the dedicated module to estimate net pay, deductions and monthly planning capacity.{% else %}Usa el m&oacute;dulo dedicado para estimar salario neto, deducciones y capacidad real de planificaci&oacute;n mensual.{% endif %}</p>
+        </div>
+        <a class="btn btn-light btn-sm" href="{% url 'finanzas:net_income' %}">{% if lang_code|slice:':2' == 'en' %}Open module{% else %}Abrir m&oacute;dulo{% endif %}</a>
+    </div>
+    <div class="net-income-highlights">
+        <article class="mini-metric-card">
+            <strong>{% if lang_code|slice:':2' == 'en' %}Salary simulation{% else %}Simulaci&oacute;n salarial{% endif %}</strong>
+            <span>{% if lang_code|slice:':2' == 'en' %}Project the real amount available after legal and custom deductions.{% else %}Proyecta el monto real disponible despu&eacute;s de deducciones legales y personalizadas.{% endif %}</span>
+        </article>
+        <article class="mini-metric-card">
+            <strong>{% if lang_code|slice:':2' == 'en' %}Deduction control{% else %}Control de deducciones{% endif %}</strong>
+            <span>{% if lang_code|slice:':2' == 'en' %}Review percentage impact before committing to new fixed expenses.{% else %}Revisa el impacto porcentual antes de asumir nuevos gastos fijos.{% endif %}</span>
+        </article>
+        <article class="mini-metric-card">
+            <strong>{% if lang_code|slice:':2' == 'en' %}Monthly planning{% else %}Planificaci&oacute;n mensual{% endif %}</strong>
+            <span>{% if lang_code|slice:':2' == 'en' %}Align salary, debt and recurring payments in one monthly decision point.{% else %}Alinea salario, deuda y pagos recurrentes en un solo punto de decisi&oacute;n mensual.{% endif %}</span>
+        </article>
+    </div>
+</section>
+
+<section class="dashboard-grid secondary secondary-cluster">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>{% if lang_code|slice:':2' == 'en' %}Credit cards{% else %}Tarjetas de cr&eacute;dito{% endif %}</h2>
+                <p>{% if lang_code|slice:':2' == 'en' %}Limits, debt, minimum payment and recommended payment.{% else %}L&iacute;mites, deuda, pago m&iacute;nimo y pago recomendado.{% endif %}</p>
+            </div>
+        </div>
+        <div class="card-list">
+            {% for card in credit_cards %}
+                <div class="debt-row">
+                    <div>
+                        <strong>{{ card.account.display_name_ui }}</strong>
+                        <span>{{ card.utilization_percent }}% {% if lang_code|slice:':2' == 'en' %}used of{% else %}usado de{% endif %} ${{ card.credit_limit|floatformat:2 }}</span>
+                        <span>{% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}: ${{ card.available_credit|floatformat:2 }}</span>
+                    </div>
+                    <div>
+                        <strong>${{ card.current_debt|floatformat:2 }}</strong>
+                        <span>{% if lang_code|slice:':2' == 'en' %}Min.{% else %}M&iacute;n.{% endif %} ${{ card.minimum_payment|floatformat:2 }} / {% if lang_code|slice:':2' == 'en' %}Rec.{% else %}Rec.{% endif %} ${{ card.recommended_payment|floatformat:2 }}</span>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state-rich">
+                    <span class="empty-icon" aria-hidden="true">&#9636;</span>
+                    <strong>{% if lang_code|slice:':2' == 'en' %}No cards registered{% else %}Sin tarjetas registradas{% endif %}</strong>
+                    <p>{% if lang_code|slice:':2' == 'en' %}Add a card to calculate debt, interest and upcoming payments.{% else %}Agrega una tarjeta para calcular deuda, intereses y pagos pr&oacute;ximos.{% endif %}</p>
+                    <a class="btn btn-success btn-sm" href="{% url 'finanzas:credit_card_list' %}">{% if lang_code|slice:':2' == 'en' %}+ Add card{% else %}+ Agregar tarjeta{% endif %}</a>
+                </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>{% if lang_code|slice:':2' == 'en' %}Useful tips{% else %}Consejos &uacute;tiles{% endif %}</h2>
+                <p>{% if lang_code|slice:':2' == 'en' %}Rules inspired by cash flow, debt and equity protection.{% else %}Reglas inspiradas en flujo de caja, deuda y protecci&oacute;n de capital.{% endif %}</p>
+            </div>
+        </div>
+        <div class="advice-list">
+            {% for item in advice %}
+                <div class="advice-item">
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ item.message }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h2>{% if lang_code|slice:':2' == 'en' %}Budget by category{% else %}Presupuesto por categor&iacute;a{% endif %}</h2>
+            <p>{% if lang_code|slice:':2' == 'en' %}Track monthly limits to avoid overspending.{% else %}Seguimiento de l&iacute;mites mensuales para evitar sobreconsumo.{% endif %}</p>
+        </div>
+        <a class="btn btn-light btn-sm" href="{% url 'finanzas:reports' %}">{% if lang_code|slice:':2' == 'en' %}View details{% else %}Ver detalle{% endif %}</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>{% if lang_code|slice:':2' == 'en' %}Category{% else %}Categor&iacute;a{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Spent{% else %}Consumido{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Limit{% else %}L&iacute;mite{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Usage{% else %}Uso{% endif %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in category_budget|slice:":5" %}
+                <tr>
+                    <td>{{ row.category.display_name_ui }}</td>
+                    <td>${{ row.spent|floatformat:2 }}</td>
+                    <td>${{ row.limit|floatformat:2 }}</td>
+                    <td class="{% if row.status == 'over' %}budget-negative{% endif %}">{{ row.usage_percent|floatformat:2 }}%</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="4">
+                    <div class="empty-state-rich">
+                        <span class="empty-icon" aria-hidden="true">%</span>
+                        <strong>{% if lang_code|slice:':2' == 'en' %}No budget limits{% else %}Sin l&iacute;mites de presupuesto{% endif %}</strong>
+                        <p>{% if lang_code|slice:':2' == 'en' %}Set expense category limits to view alerts here.{% else %}Define l&iacute;mites en categor&iacute;as de gasto para ver alertas aqu&iacute;.{% endif %}</p>
+                        <a class="btn btn-light btn-sm" href="{% url 'finanzas:settings' %}">{% if lang_code|slice:':2' == 'en' %}Configure categories{% else %}Configurar categor&iacute;as{% endif %}</a>
+                    </div>
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel activity-panel">
+    <div class="panel-header">
+        <div>
+            <h2>{% if lang_code|slice:':2' == 'en' %}Recent activity{% else %}Actividad reciente{% endif %}</h2>
+            <p>{% if lang_code|slice:':2' == 'en' %}Latest recorded movements.{% else %}&Uacute;ltimos movimientos registrados.{% endif %}</p>
+        </div>
+        <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_transactions_csv' %}">{% if lang_code|slice:':2' == 'en' %}Export CSV{% else %}Exportar CSV{% endif %}</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>{% if lang_code|slice:':2' == 'en' %}Activity{% else %}Actividad{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Account{% else %}Cuenta{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Date{% else %}Fecha{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Amount{% else %}Monto{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Status{% else %}Estado{% endif %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for transaction in recent_transactions %}
+                <tr>
+                    <td>{{ transaction.description }}</td>
+                    <td>{{ transaction.account.display_name_ui }}</td>
+                    <td>{{ transaction.date }}</td>
+                    <td>${{ transaction.amount|floatformat:2 }}</td>
+                    <td><span class="status-dot"></span>{{ transaction.status_label_ui }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5">
+                    <div class="empty-state-rich">
+                        <span class="empty-icon" aria-hidden="true">&#8644;</span>
+                        <strong>{% if lang_code|slice:':2' == 'en' %}No movements yet{% else %}Todav&iacute;a no hay movimientos{% endif %}</strong>
+                        <p>{% if lang_code|slice:':2' == 'en' %}Register your first transaction to start building your financial history.{% else %}Registra tu primer movimiento para comenzar a construir tu historial.{% endif %}</p>
+                        <a class="btn btn-success btn-sm" href="{% url 'finanzas:transaction_create' %}">{% if lang_code|slice:':2' == 'en' %}+ New movement{% else %}+ Nuevo movimiento{% endif %}</a>
+                    </div>
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{{ cash_flow_series|json_script:"cash-flow-series" }}
+{% endwith %}
+{% endblock %}

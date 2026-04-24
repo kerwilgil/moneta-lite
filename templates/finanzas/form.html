@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ title }}{% endblock %}
+{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Form{% else %}Formulario{% endif %}{% endblock %}
+{% block content %}
+{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<section class="page-heading">
+    <div>
+        <h1>{{ title }}</h1>
+        <p>{{ subtitle }}</p>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url cancel_url %}">{% if lang_code|slice:':2' == 'en' %}Cancel{% else %}Cancelar{% endif %}</a>
+</section>
+
+{% if helper_note %}
+    <section class="notice-panel">
+        <span>{{ helper_note }}</span>
+        {% if helper_url %}
+            <a href="{% url helper_url %}">{{ helper_label }}</a>
+        {% endif %}
+    </section>
+{% endif %}
+
+<section class="panel form-panel">
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="form-alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="form-grid">
+            {% for field in form %}
+                <div class="form-field {% if field.field.widget.input_type == 'checkbox' %}form-field-check{% endif %}">
+                    {% if field.field.widget.input_type == 'checkbox' %}
+                        <label class="form-check-label">
+                            {{ field }}
+                            <span>{{ field.label }}</span>
+                        </label>
+                    {% else %}
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    {% endif %}
+                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                    {% for error in field.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url cancel_url %}">{% if lang_code|slice:':2' == 'en' %}Cancel{% else %}Cancelar{% endif %}</a>
+            <button class="btn btn-success" type="submit">{{ submit_label }}</button>
+        </div>
+    </form>
+</section>
+{% endwith %}
+{% endblock %}

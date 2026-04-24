@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Recurring Payments{% else %}Pagos recurrentes{% endif %}{% endblock %}
+{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Recurring{% else %}Recurrentes{% endif %}{% endblock %}
+{% block content %}
+{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<section class="page-heading">
+    <div>
+        <h1>{% if lang_code|slice:':2' == 'en' %}Recurring payments{% else %}Pagos recurrentes{% endif %}</h1>
+        <p>{% if lang_code|slice:':2' == 'en' %}Fixed obligations and due-date reminders.{% else %}Obligaciones fijas y recordatorios de vencimiento.{% endif %}</p>
+    </div>
+    <div class="heading-actions">
+        <form method="post" action="{% url 'finanzas:recurring_run_now' %}">
+            {% csrf_token %}
+            <button class="btn btn-light btn-sm" type="submit">{% if lang_code|slice:':2' == 'en' %}Run now{% else %}Ejecutar ahora{% endif %}</button>
+        </form>
+        <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_recurring_csv' %}">{% if lang_code|slice:':2' == 'en' %}Export CSV{% else %}Exportar CSV{% endif %}</a>
+        <a class="btn btn-light btn-sm" href="{% url 'finanzas:category_create' %}">{% if lang_code|slice:':2' == 'en' %}New category{% else %}Nueva categor&iacute;a{% endif %}</a>
+        <a class="btn btn-success btn-sm" href="{% url 'finanzas:recurring_create' %}">{% if lang_code|slice:':2' == 'en' %}New recurring{% else %}Nuevo recurrente{% endif %}</a>
+    </div>
+</section>
+
+<section class="mini-metric-grid">
+    <article class="mini-metric-card">
+        <span>{% if lang_code|slice:':2' == 'en' %}Monthly projection{% else %}Proyección mensual{% endif %}</span>
+        <strong>${{ summary_monthly_projection|floatformat:2 }}</strong>
+    </article>
+    <article class="mini-metric-card">
+        <span>{% if lang_code|slice:':2' == 'en' %}Due in 30 days{% else %}Vence en 30 días{% endif %}</span>
+        <strong>${{ summary_due_next_30|floatformat:2 }}</strong>
+    </article>
+    <article class="mini-metric-card">
+        <span>{% if lang_code|slice:':2' == 'en' %}Active records{% else %}Registros activos{% endif %}</span>
+        <strong>{{ summary_active_count }}</strong>
+    </article>
+</section>
+
+<section class="panel compact-panel">
+    <form method="get" class="filters-grid filters-grid-short">
+        <select class="form-select" name="active">
+            <option value="all" {% if filters.active == "all" %}selected{% endif %}>{% if lang_code|slice:':2' == 'en' %}All{% else %}Todos{% endif %}</option>
+            <option value="active" {% if filters.active == "active" %}selected{% endif %}>{% if lang_code|slice:':2' == 'en' %}Only active{% else %}Solo activos{% endif %}</option>
+            <option value="inactive" {% if filters.active == "inactive" %}selected{% endif %}>{% if lang_code|slice:':2' == 'en' %}Only inactive{% else %}Solo inactivos{% endif %}</option>
+        </select>
+        <div class="filters-actions">
+            <button class="btn btn-success btn-sm" type="submit">{% if lang_code|slice:':2' == 'en' %}Filter{% else %}Filtrar{% endif %}</button>
+            <a class="btn btn-light btn-sm" href="{% url 'finanzas:recurring_list' %}">{% if lang_code|slice:':2' == 'en' %}Clear{% else %}Limpiar{% endif %}</a>
+        </div>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>{% if lang_code|slice:':2' == 'en' %}Name{% else %}Nombre{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Account{% else %}Cuenta{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Category{% else %}Categoría{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Frequency{% else %}Frecuencia{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Next due{% else %}Próximo pago{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Amount{% else %}Monto{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Status{% else %}Estado{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Last run{% else %}Última ejecución{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.name }}</td>
+                    <td>{{ payment.account.name }}</td>
+                    <td>{{ payment.category.name|default:"-" }}</td>
+                    <td>{{ payment.frequency_label_ui }}</td>
+                    <td>{{ payment.next_due_date }}</td>
+                    <td>${{ payment.amount|floatformat:2 }}</td>
+                    <td>{% if payment.is_active %}<span class="status-dot"></span>{{ payment.active_label_ui }}{% else %}{{ payment.inactive_label_ui }}{% endif %}</td>
+                    <td>
+                        {% if payment.last_execution_at %}
+                            {{ payment.last_execution_at|date:"Y-m-d H:i" }}
+                            {% if payment.last_execution_status %}
+                                <small class="text-muted d-block">{{ payment.execution_status_label_ui }}</small>
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="table-actions">
+                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:recurring_edit' payment.id %}">{% if lang_code|slice:':2' == 'en' %}Edit{% else %}Editar{% endif %}</a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:recurring_delete' payment.id %}">{% if lang_code|slice:':2' == 'en' %}Delete{% else %}Eliminar{% endif %}</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="9" class="empty-state">{% if lang_code|slice:':2' == 'en' %}No recurring payments registered.{% else %}No hay pagos recurrentes registrados.{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endwith %}
+{% endblock %}

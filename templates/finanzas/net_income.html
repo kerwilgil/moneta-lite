@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Net Income{% else %}Ingreso neto{% endif %}{% endblock %}
+{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Net Income{% else %}Ingreso neto{% endif %}{% endblock %}
+{% block content %}
+{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<section class="page-heading">
+    <div>
+        <h1>{% if lang_code|slice:':2' == 'en' %}Monthly Net Income{% else %}Ingreso neto mensual{% endif %}</h1>
+        <p>{% if lang_code|slice:':2' == 'en' %}Track deductions like social security and taxes to estimate take-home pay.{% else %}Registra deducciones como seguro social e impuestos para calcular tu ingreso real.{% endif %}</p>
+    </div>
+</section>
+
+<section class="salary-workspace">
+    <article class="panel salary-panel salary-panel-standalone" id="salaryCalculatorPanel" data-lang="{{ lang_code|slice:':2' }}">
+        <div class="panel-header">
+            <div>
+                <h2>{% if lang_code|slice:':2' == 'en' %}Salary breakdown{% else %}Desglose salarial{% endif %}</h2>
+                <p>{% if lang_code|slice:':2' == 'en' %}Deductions like social security and taxes to estimate take-home pay.{% else %}Registra deducciones como seguro social e impuestos para calcular tu ingreso real.{% endif %}</p>
+            </div>
+        </div>
+        <div class="salary-input-area">
+            <div class="form-field salary-gross-field">
+                <label for="salaryGross">{% if lang_code|slice:':2' == 'en' %}Monthly gross salary{% else %}Salario bruto mensual{% endif %}</label>
+                <input id="salaryGross" class="form-control" type="number" step="0.01" min="0" value="1900">
+            </div>
+            <div class="salary-deductions" id="salaryDeductions">
+                <div class="salary-row">
+                    <input type="text" class="form-control deduction-name" value="{% if lang_code|slice:':2' == 'en' %}Social security{% else %}Seguro social{% endif %}" aria-label="{% if lang_code|slice:':2' == 'en' %}Deduction name{% else %}Nombre deduccion{% endif %}">
+                    <input type="number" step="0.01" min="0" class="form-control deduction-amount" value="0" aria-label="{% if lang_code|slice:':2' == 'en' %}Deduction amount{% else %}Monto deduccion{% endif %}">
+                    <span class="deduction-percent">0.00%</span>
+                    <button class="btn btn-outline-danger btn-sm remove-deduction" type="button">{% if lang_code|slice:':2' == 'en' %}Remove{% else %}Quitar{% endif %}</button>
+                </div>
+                <div class="salary-row">
+                    <input type="text" class="form-control deduction-name" value="{% if lang_code|slice:':2' == 'en' %}Taxes{% else %}Impuestos{% endif %}" aria-label="{% if lang_code|slice:':2' == 'en' %}Deduction name{% else %}Nombre deduccion{% endif %}">
+                    <input type="number" step="0.01" min="0" class="form-control deduction-amount" value="0" aria-label="{% if lang_code|slice:':2' == 'en' %}Deduction amount{% else %}Monto deduccion{% endif %}">
+                    <span class="deduction-percent">0.00%</span>
+                    <button class="btn btn-outline-danger btn-sm remove-deduction" type="button">{% if lang_code|slice:':2' == 'en' %}Remove{% else %}Quitar{% endif %}</button>
+                </div>
+            </div>
+            <div class="salary-actions">
+                <button class="btn btn-light btn-sm" id="addDeductionRow" type="button">{% if lang_code|slice:':2' == 'en' %}Add deduction{% else %}Agregar deduccion{% endif %}</button>
+                <button class="btn btn-success btn-sm" id="saveNetIncomeCard" type="button">{% if lang_code|slice:':2' == 'en' %}Save record{% else %}Guardar registro{% endif %}</button>
+            </div>
+        </div>
+        <div class="salary-summary">
+            <div><span>{% if lang_code|slice:':2' == 'en' %}Total deductions{% else %}Total deducciones{% endif %}</span><strong id="salaryTotalDeductions">$0.00</strong></div>
+            <div><span>{% if lang_code|slice:':2' == 'en' %}Net salary{% else %}Salario neto{% endif %}</span><strong id="salaryNet">$0.00</strong></div>
+        </div>
+    </article>
+
+    <aside class="panel quick-calc-panel" id="quickCalculator" data-lang="{{ lang_code|slice:':2' }}">
+        <div class="panel-header">
+            <div>
+                <h2>{% if lang_code|slice:':2' == 'en' %}Quick calculator{% else %}Calculadora rapida{% endif %}</h2>
+                <p>{% if lang_code|slice:':2' == 'en' %}Use it for deductions, percentages and monthly estimates.{% else %}Usala para deducciones, porcentajes y estimaciones mensuales.{% endif %}</p>
+            </div>
+        </div>
+        <div class="quick-calc-display" id="quickCalcDisplay">0</div>
+        <div class="quick-calc-grid" aria-label="{% if lang_code|slice:':2' == 'en' %}Calculator keypad{% else %}Teclado calculadora{% endif %}">
+            <button type="button" data-calc-action="clear">AC</button>
+            <button type="button" data-calc-action="back">Back</button>
+            <button type="button" data-calc-value="%">%</button>
+            <button type="button" data-calc-value="/">/</button>
+            <button type="button" data-calc-value="7">7</button>
+            <button type="button" data-calc-value="8">8</button>
+            <button type="button" data-calc-value="9">9</button>
+            <button type="button" data-calc-value="*">x</button>
+            <button type="button" data-calc-value="4">4</button>
+            <button type="button" data-calc-value="5">5</button>
+            <button type="button" data-calc-value="6">6</button>
+            <button type="button" data-calc-value="-">-</button>
+            <button type="button" data-calc-value="1">1</button>
+            <button type="button" data-calc-value="2">2</button>
+            <button type="button" data-calc-value="3">3</button>
+            <button type="button" data-calc-value="+">+</button>
+            <button type="button" class="quick-calc-zero" data-calc-value="0">0</button>
+            <button type="button" data-calc-value=".">.</button>
+            <button type="button" class="quick-calc-equals" data-calc-action="equals">=</button>
+        </div>
+    </aside>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h2>{% if lang_code|slice:':2' == 'en' %}Saved records{% else %}Registros guardados{% endif %}</h2>
+            <p>{% if lang_code|slice:':2' == 'en' %}Saved monthly calculations with gross salary, deductions and net result.{% else %}Calculos mensuales guardados con salario bruto, deducciones y resultado neto.{% endif %}</p>
+        </div>
+    </div>
+    <div class="salary-cards-grid" id="netIncomeCards"></div>
+</section>
+{% endwith %}
+{% endblock %}

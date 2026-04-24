@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% block title %}{{ title }}{% endblock %}
+{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Ledger{% else %}Libro contable{% endif %}{% endblock %}
+{% block content %}
+{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<section class="page-heading">
+    <div>
+        <h1>{{ title }}</h1>
+        <p>{{ subtitle }}</p>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url cancel_url %}">{% if lang_code|slice:':2' == 'en' %}Cancel{% else %}Cancelar{% endif %}</a>
+</section>
+
+<section class="panel form-panel">
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="form-grid">
+            {% for field in form %}
+                <div class="form-field {% if field.field.widget.input_type == 'checkbox' %}form-field-check{% endif %}">
+                    {% if field.field.widget.input_type == 'checkbox' %}
+                        <label class="form-check-label">
+                            {{ field }}
+                            <span>{{ field.label }}</span>
+                        </label>
+                    {% else %}
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    {% endif %}
+                    {% for error in field.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="journal-lines">
+            <div class="panel-header">
+                <div>
+                    <h2>{% if lang_code|slice:':2' == 'en' %}Entry lines{% else %}Lineas del asiento{% endif %}</h2>
+                    <p>{% if lang_code|slice:':2' == 'en' %}Use one value per line: Debit or Credit.{% else %}Usa una columna por linea: Debe o Haber.{% endif %}</p>
+                </div>
+                <button class="btn btn-outline-success btn-sm" type="button" id="add-journal-line">{% if lang_code|slice:':2' == 'en' %}Add line{% else %}Agregar linea{% endif %}</button>
+            </div>
+            {{ formset.management_form }}
+            <div id="journal-lines-container">
+            {% for line_form in formset %}
+                <div class="journal-line-grid line-row">
+                    {% for field in line_form %}
+                        <div class="form-field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+                        </div>
+                    {% endfor %}
+                    <div class="line-actions">
+                        <button class="btn btn-outline-danger btn-sm line-remove" type="button">{% if lang_code|slice:':2' == 'en' %}Remove{% else %}Quitar{% endif %}</button>
+                    </div>
+                </div>
+                {% if line_form.non_field_errors %}
+                    <div class="form-alert">{{ line_form.non_field_errors }}</div>
+                {% endif %}
+            {% endfor %}
+            </div>
+            <template id="journal-line-template">
+                <div class="journal-line-grid line-row">
+                    {% for field in formset.empty_form %}
+                        <div class="form-field">
+                            <label>{{ field.label }}</label>
+                            {{ field }}
+                        </div>
+                    {% endfor %}
+                    <div class="line-actions">
+                        <button class="btn btn-outline-danger btn-sm line-remove" type="button">{% if lang_code|slice:':2' == 'en' %}Remove{% else %}Quitar{% endif %}</button>
+                    </div>
+                </div>
+            </template>
+
+            <div class="journal-totals" id="journal-totals">
+                <div><span>{% if lang_code|slice:':2' == 'en' %}Total debit{% else %}Total Debe{% endif %}</span><strong id="total-debit">$0.00</strong></div>
+                <div><span>{% if lang_code|slice:':2' == 'en' %}Total credit{% else %}Total Haber{% endif %}</span><strong id="total-credit">$0.00</strong></div>
+                <div><span>{% if lang_code|slice:':2' == 'en' %}Difference{% else %}Diferencia{% endif %}</span><strong id="total-diff">$0.00</strong></div>
+            </div>
+            <div class="form-alert d-none" id="journal-balance-error">
+                {% if lang_code|slice:':2' == 'en' %}
+                    The entry must be balanced: total Debit = total Credit and at least two valid lines.
+                {% else %}
+                    El asiento debe estar balanceado: total Debe = total Haber y al menos dos lineas validas.
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url cancel_url %}">{% if lang_code|slice:':2' == 'en' %}Cancel{% else %}Cancelar{% endif %}</a>
+            <button class="btn btn-success" type="submit" id="journal-submit">{% if lang_code|slice:':2' == 'en' %}Save entry{% else %}Guardar asiento{% endif %}</button>
+        </div>
+    </form>
+</section>
+<script src="{% static 'js/journal_form.js' %}"></script>
+{% endwith %}
+{% endblock %}

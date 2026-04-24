@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ title }}{% endblock %}
+{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Delete{% else %}Eliminar{% endif %}{% endblock %}
+{% block content %}
+{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<section class="page-heading">
+    <div>
+        <h1>{{ title }}</h1>
+        <p>{{ subtitle }}</p>
+    </div>
+</section>
+
+<section class="panel form-panel">
+    <form method="post">
+        {% csrf_token %}
+        <p class="empty-state">
+            {% if lang_code|slice:':2' == 'en' %}
+                Confirm deletion. This action cannot be undone.
+            {% else %}
+                Confirma para eliminar {{ label|lower }}. Esta accion no se puede deshacer.
+            {% endif %}
+        </p>
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url cancel_url %}">{% if lang_code|slice:':2' == 'en' %}Cancel{% else %}Cancelar{% endif %}</a>
+            <button class="btn btn-danger" type="submit">{% if lang_code|slice:':2' == 'en' %}Delete{% else %}Eliminar {{ label|lower }}{% endif %}</button>
+        </div>
+    </form>
+</section>
+{% endwith %}
+{% endblock %}

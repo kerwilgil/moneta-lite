@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Ledger{% else %}Libro contable{% endif %}{% endblock %}
+{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Ledger{% else %}Libro contable{% endif %}{% endblock %}
+{% block content %}
+{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<section class="page-heading">
+    <div>
+        <h1>{% if lang_code|slice:':2' == 'en' %}Ledger{% else %}Libro contable{% endif %}</h1>
+        <p>{% if lang_code|slice:':2' == 'en' %}Entries with Debit, Credit and double-entry validation.{% else %}Asientos con Debe, Haber y validacion de partida doble.{% endif %}</p>
+    </div>
+    <a class="btn btn-success btn-sm" href="{% url 'finanzas:ledger_create' %}">{% if lang_code|slice:':2' == 'en' %}New entry{% else %}Nuevo asiento{% endif %}</a>
+</section>
+
+<section class="panel ledger-list">
+    {% for entry in entries %}
+        <article class="ledger-entry">
+            <div class="panel-header">
+                <div>
+                    <h2>{{ entry.description }}</h2>
+                    <p>{{ entry.date }}{% if entry.source %} · {{ entry.source }}{% endif %}</p>
+                </div>
+                {% if entry.is_balanced %}
+                    <span class="metric-badge positive">{% if lang_code|slice:':2' == 'en' %}Balanced{% else %}Balanceado{% endif %}</span>
+                {% else %}
+                    <span class="metric-badge warning">{% if lang_code|slice:':2' == 'en' %}Unbalanced{% else %}Descuadrado{% endif %}</span>
+                {% endif %}
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                    <tr>
+                        <th>{% if lang_code|slice:':2' == 'en' %}Account{% else %}Cuenta{% endif %}</th>
+                        <th>{% if lang_code|slice:':2' == 'en' %}Memo{% else %}Memo{% endif %}</th>
+                        <th>{% if lang_code|slice:':2' == 'en' %}Debit{% else %}Debe{% endif %}</th>
+                        <th>{% if lang_code|slice:':2' == 'en' %}Credit{% else %}Haber{% endif %}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for line in entry.lines.all %}
+                        <tr>
+                            <td>{{ line.account.name }}</td>
+                            <td>{{ line.memo|default:"-" }}</td>
+                            <td>${{ line.debit|floatformat:2 }}</td>
+                            <td>${{ line.credit|floatformat:2 }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    {% empty %}
+        <div class="empty-state-rich">
+            <span class="empty-icon" aria-hidden="true">&#128209;</span>
+            <strong>{% if lang_code|slice:':2' == 'en' %}No ledger entries{% else %}Sin asientos contables{% endif %}</strong>
+            <p>{% if lang_code|slice:':2' == 'en' %}Start recording double-entry bookkeeping with debit and credit validation.{% else %}Empieza a registrar partida doble con validaci&oacute;n Debe / Haber.{% endif %}</p>
+            <a class="btn btn-success btn-sm" href="{% url 'finanzas:ledger_create' %}">{% if lang_code|slice:':2' == 'en' %}New entry{% else %}Nuevo asiento{% endif %}</a>
+        </div>
+    {% endfor %}
+</section>
+{% endwith %}
+{% endblock %}

@@ -1,0 +1,188 @@
+{% load i18n static %}
+{% get_current_language as LANGUAGE_CODE %}
+<!doctype html>
+<html lang="{{ request.LANGUAGE_CODE|default:LANGUAGE_CODE|default:'es' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}{{ product.description_en }}{% else %}{{ product.description_es }}{% endif %}">
+    <meta name="theme-color" content="#eef2f0" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#081018" media="(prefers-color-scheme: dark)">
+    <meta name="color-scheme" content="light dark">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ product.name }}">
+    <meta property="og:title" content="{% block og_title %}{{ product.name }}{% endblock %}">
+    <meta property="og:description" content="{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}{{ product.description_en }}{% else %}{{ product.description_es }}{% endif %}">
+    <meta property="og:image" content="{% static product.og_image %}">
+    <meta property="og:locale" content="{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}en_US{% else %}es_PA{% endif %}">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}{{ product.name }}{% endblock %}">
+    <meta name="twitter:description" content="{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}{{ product.description_en }}{% else %}{{ product.description_es }}{% endif %}">
+    <meta name="twitter:image" content="{% static product.og_image %}">
+
+    <title>{% block title %}{{ product.name }}{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static product.favicon %}">
+    <link rel="apple-touch-icon" href="{% static product.favicon %}">
+    <script>
+        (() => {
+            const storedTheme = localStorage.getItem("moneta-theme") || "auto";
+            const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            const resolvedTheme = storedTheme === "auto" ? (prefersDark ? "dark" : "light") : storedTheme;
+            document.documentElement.dataset.theme = resolvedTheme;
+            document.documentElement.dataset.themeMode = storedTheme;
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+{% with active=request.resolver_match.url_name lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<div class="app-shell">
+    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+    <aside class="sidebar" id="app-sidebar">
+        <a class="brand" href="{% url 'finanzas:dashboard' %}" aria-label="{{ product.name }} - Ir al inicio">
+            <span class="brand-mark">
+                <img class="brand-logo brand-logo-light" src="{% static product.logo_light %}" alt="{{ product.name }}" loading="lazy">
+                <img class="brand-logo brand-logo-dark" src="{% static product.logo_dark %}" alt="{{ product.name }}" loading="lazy">
+                <span class="brand-mark-fallback" style="display:none;">M</span>
+            </span>
+            <span class="brand-title">{{ product.name }}</span>
+        </a>
+
+        <form class="search-box" role="search" method="get" action="{% url 'finanzas:transaction_list' %}">
+            <span class="search-icon" aria-hidden="true"></span>
+            <input type="search" name="q" placeholder="{% if lang_code|slice:':2' == 'en' %}Search transactions, contact or note{% else %}Buscar movimientos, contacto o nota{% endif %}" aria-label="{% if lang_code|slice:':2' == 'en' %}Search{% else %}Buscar{% endif %}">
+            <button type="submit">{% if lang_code|slice:':2' == 'en' %}Go{% else %}Ir{% endif %}</button>
+        </form>
+
+        <p class="nav-label" id="nav-label-main">{% if lang_code|slice:':2' == 'en' %}Main Menu{% else %}Menu principal{% endif %}</p>
+        <nav class="nav flex-column side-nav" aria-labelledby="nav-label-main">
+            <a class="nav-link {% if active == 'dashboard' %}active{% endif %}" href="{% url 'finanzas:dashboard' %}" {% if active == 'dashboard' %}aria-current="page"{% endif %} aria-label="Dashboard"><span class="nav-icon nav-icon-dashboard" aria-hidden="true"><span></span></span><span>Dashboard</span></a>
+            {% if features.reports %}<a class="nav-link {% if active == 'reports' %}active{% endif %}" href="{% url 'finanzas:reports' %}" {% if active == 'reports' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Analytics{% else %}Analisis{% endif %}"><span class="nav-icon nav-icon-analytics" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Analytics{% else %}Analisis{% endif %}</span></a>{% endif %}
+            {% if features.transactions %}<a class="nav-link {% if active == 'transaction_list' %}active{% endif %}" href="{% url 'finanzas:transaction_list' %}" {% if active == 'transaction_list' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Transactions{% else %}Movimientos{% endif %}"><span class="nav-icon nav-icon-transactions" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Transactions{% else %}Movimientos{% endif %}</span></a>{% endif %}
+            {% if features.invoices %}<a class="nav-link {% if active == 'invoice_list' %}active{% endif %}" href="{% url 'finanzas:invoice_list' %}" {% if active == 'invoice_list' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Invoices{% else %}Facturas{% endif %}"><span class="nav-icon nav-icon-invoices" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Invoices{% else %}Facturas{% endif %}</span></a>{% endif %}
+        </nav>
+
+        {% if features.recurring or features.net_income or features.subscriptions or features.credit_cards or features.ledger %}
+        <p class="nav-label" id="nav-label-ops">{% if lang_code|slice:':2' == 'en' %}Operations{% else %}Operaciones{% endif %}</p>
+        <nav class="nav flex-column side-nav" aria-labelledby="nav-label-ops">
+            {% if features.recurring %}<a class="nav-link {% if active == 'recurring_list' %}active{% endif %}" href="{% url 'finanzas:recurring_list' %}" {% if active == 'recurring_list' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Recurring{% else %}Recurrentes{% endif %}"><span class="nav-icon nav-icon-recurring" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Recurring{% else %}Recurrentes{% endif %}</span></a>{% endif %}
+            {% if features.net_income %}<a class="nav-link {% if active == 'net_income' %}active{% endif %}" href="{% url 'finanzas:net_income' %}" {% if active == 'net_income' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Net Income{% else %}Ingreso neto{% endif %}"><span class="nav-icon nav-icon-net-income" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Net Income{% else %}Ingreso neto{% endif %}</span></a>{% endif %}
+            {% if features.subscriptions %}<a class="nav-link {% if active == 'subscription_list' %}active{% endif %}" href="{% url 'finanzas:subscription_list' %}" {% if active == 'subscription_list' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Subscriptions{% else %}Suscripciones{% endif %}"><span class="nav-icon nav-icon-subscriptions" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Subscriptions{% else %}Suscripciones{% endif %}</span></a>{% endif %}
+            {% if features.credit_cards %}<a class="nav-link {% if active == 'credit_card_list' %}active{% endif %}" href="{% url 'finanzas:credit_card_list' %}" {% if active == 'credit_card_list' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Cards{% else %}Tarjetas{% endif %}"><span class="nav-icon nav-icon-cards" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Cards{% else %}Tarjetas{% endif %}</span></a>{% endif %}
+            {% if features.ledger %}<a class="nav-link {% if active == 'ledger' %}active{% endif %}" href="{% url 'finanzas:ledger' %}" {% if active == 'ledger' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Ledger{% else %}Libro contable{% endif %}"><span class="nav-icon nav-icon-ledger" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Ledger{% else %}Libro contable{% endif %}</span></a>{% endif %}
+        </nav>
+        {% endif %}
+
+        <p class="nav-label" id="nav-label-general">General</p>
+        <nav class="nav flex-column side-nav" aria-labelledby="nav-label-general">
+            {% if features.admin_link %}<a class="nav-link" href="/admin/" aria-label="{% if lang_code|slice:':2' == 'en' %}Administration{% else %}Administracion{% endif %}"><span class="nav-icon nav-icon-admin" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Admin{% else %}Administracion{% endif %}</span></a>{% endif %}
+            {% if features.settings %}<a class="nav-link {% if active == 'settings' %}active{% endif %}" href="{% url 'finanzas:settings' %}" {% if active == 'settings' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Settings{% else %}Ajustes{% endif %}"><span class="nav-icon nav-icon-settings" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Settings{% else %}Ajustes{% endif %}</span></a>{% endif %}
+        </nav>
+
+        <div class="upgrade-box">
+            <strong>{{ product.name }} {{ edition.label }}</strong>
+            <span>{% if edition.is_lite %}{% if lang_code|slice:':2' == 'en' %}Lean product edition prepared for sale and quick onboarding.{% else %}Edicion ligera del producto lista para venta y onboarding rapido.{% endif %}{% elif edition.is_personal %}{% if lang_code|slice:':2' == 'en' %}Private operational build for your own use on PC or NAS.{% else %}Compilacion privada para tu uso propio en PC o NAS.{% endif %}{% else %}{% if lang_code|slice:':2' == 'en' %}Full workspace for demos, advanced modules and product evolution.{% else %}Espacio completo para demos, modulos avanzados y evolucion del producto.{% endif %}{% endif %}</span>
+        </div>
+
+        {% if user.is_authenticated %}
+            <div class="session-card">
+                <div class="session-user">
+                    <span class="session-avatar">{{ user.username|first|upper }}</span>
+                    <div>
+                        <strong>{{ user.username }}</strong>
+                        <small>{% if lang_code|slice:':2' == 'en' %}Active session{% else %}Sesion activa{% endif %}</small>
+                    </div>
+                </div>
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button class="logout-button" type="submit" aria-label="{% if lang_code|slice:':2' == 'en' %}Sign out{% else %}Cerrar sesion{% endif %}">
+                        <span class="door-icon"></span>
+                        <span>{% if lang_code|slice:':2' == 'en' %}Sign out{% else %}Salir{% endif %}</span>
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-nav-toggle" type="button" id="mobileNavToggle" aria-label="{% if lang_code|slice:':2' == 'en' %}Open menu{% else %}Abrir menu{% endif %}" aria-controls="app-sidebar" aria-expanded="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h18v2H3v-2Z"/></svg>
+                </button>
+                <span class="crumb-brand">
+                    <img class="crumb-icon crumb-icon-light" src="{% static product.logo_light %}" alt="" loading="lazy">
+                    <img class="crumb-icon crumb-icon-dark" src="{% static product.logo_dark %}" alt="" loading="lazy">
+                </span>
+                <span class="crumb crumb-moneta">{{ product.name }} /</span>
+                <span>{% block section %}Dashboard{% endblock %}</span>
+            </div>
+            <div class="top-actions">
+                {% if features.settings %}<a class="icon-btn icon-btn-text" href="{% url 'finanzas:settings' %}" aria-label="{% if lang_code|slice:':2' == 'en' %}Settings{% else %}Ajustes{% endif %}">{% if lang_code|slice:':2' == 'en' %}Settings{% else %}Ajustes{% endif %}</a>{% endif %}
+                {% if features.transactions %}<a class="btn btn-success btn-sm" href="{% url 'finanzas:transaction_create' %}">{% if lang_code|slice:':2' == 'en' %}+ New{% else %}+ Nuevo{% endif %}</a>{% endif %}
+            </div>
+        </header>
+        {% if messages %}
+            <div class="message-stack">
+                {% for message in messages %}
+                    <div class="app-message {{ message.tags }}">
+                        <strong class="app-message-label">
+                            {% if "error" in message.tags %}
+                                {% if lang_code|slice:':2' == 'en' %}Error{% else %}Error{% endif %}
+                            {% elif "success" in message.tags %}
+                                {% if lang_code|slice:':2' == 'en' %}Success{% else %}Exito{% endif %}
+                            {% else %}
+                                {% if lang_code|slice:':2' == 'en' %}Info{% else %}Info{% endif %}
+                            {% endif %}
+                        </strong>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+</div>
+{% endwith %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/theme.js' %}"></script>
+<script src="{% static 'js/image_fallbacks.js' %}"></script>
+<script src="{% static 'js/dashboard.js' %}"></script>
+<script src="{% static 'js/salary_calculator.js' %}"></script>
+<script>
+(() => {
+    const toggle = document.getElementById("mobileNavToggle");
+    const backdrop = document.getElementById("sidebarBackdrop");
+    if (!toggle) return;
+
+    const open = () => {
+        document.body.dataset.sidebar = "open";
+        toggle.setAttribute("aria-expanded", "true");
+    };
+    const close = () => {
+        document.body.removeAttribute("data-sidebar");
+        toggle.setAttribute("aria-expanded", "false");
+    };
+
+    toggle.addEventListener("click", () => {
+        document.body.dataset.sidebar === "open" ? close() : open();
+    });
+    backdrop?.addEventListener("click", close);
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && document.body.dataset.sidebar === "open") close();
+    });
+    document.querySelectorAll(".sidebar .nav-link").forEach((link) => {
+        link.addEventListener("click", () => {
+            if (window.matchMedia("(max-width: 1100px)").matches) close();
+        });
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Settings{% else %}Configuraci&oacute;n{% endif %}{% endblock %}
+{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Settings{% else %}Configuraci&oacute;n{% endif %}{% endblock %}
+{% block content %}
+{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<section class="page-heading">
+    <div>
+        <h1>{% if lang_code|slice:':2' == 'en' %}Settings{% else %}Configuraci&oacute;n{% endif %}</h1>
+        <p>{% if lang_code|slice:':2' == 'en' %}System parameters, user and base data.{% else %}Par&aacute;metros del sistema, usuario y datos base.{% endif %}</p>
+    </div>
+    <div class="heading-actions">
+        <a class="btn btn-light btn-sm" href="{% url 'finanzas:category_create' %}">{% if lang_code|slice:':2' == 'en' %}New category{% else %}Nueva categor&iacute;a{% endif %}</a>
+        <a class="btn btn-success btn-sm" href="{% url 'finanzas:account_create' %}">{% if lang_code|slice:':2' == 'en' %}New account{% else %}Nueva cuenta{% endif %}</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h2>{% if lang_code|slice:':2' == 'en' %}Preferences{% else %}Preferencias{% endif %}</h2>
+            <p>{% if lang_code|slice:':2' == 'en' %}Language and appearance of the interface.{% else %}Idioma y apariencia de la interfaz.{% endif %}</p>
+        </div>
+    </div>
+    <div class="preferences-grid">
+        <form class="preference-field" action="{% url 'finanzas:change_language' %}" method="post">
+            {% csrf_token %}
+            <input name="next" type="hidden" value="{{ request.get_full_path }}">
+            <label for="languageMode">{% if lang_code|slice:':2' == 'en' %}Language{% else %}Idioma{% endif %}</label>
+            <select id="languageMode" name="language" class="form-select" onchange="this.form.submit()">
+                <option value="es" {% if lang_code|slice:':2' == 'es' %}selected{% endif %}>ES &mdash; Espa&ntilde;ol</option>
+                <option value="en" {% if lang_code|slice:':2' == 'en' %}selected{% endif %}>EN &mdash; English</option>
+            </select>
+        </form>
+        <div class="preference-field">
+            <label for="themeMode">{% if lang_code|slice:':2' == 'en' %}Theme{% else %}Tema{% endif %}</label>
+            <select id="themeMode" class="form-select" aria-label="{% if lang_code|slice:':2' == 'en' %}Select theme{% else %}Seleccionar tema{% endif %}">
+                <option value="light">{% if lang_code|slice:':2' == 'en' %}Light{% else %}Claro{% endif %}</option>
+                <option value="dark">{% if lang_code|slice:':2' == 'en' %}Dark{% else %}Oscuro{% endif %}</option>
+                <option value="auto">{% if lang_code|slice:':2' == 'en' %}Auto{% else %}Autom&aacute;tico{% endif %}</option>
+            </select>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-grid secondary">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>{% if lang_code|slice:':2' == 'en' %}Catalogs{% else %}Cat&aacute;logos{% endif %}</h2>
+                <p>{% if lang_code|slice:':2' == 'en' %}Accounts, categories and base rules.{% else %}Cuentas, categor&iacute;as y reglas base.{% endif %}</p>
+            </div>
+        </div>
+        <div class="roadmap-list settings-links">
+            <a href="{% url 'finanzas:account_create' %}">{% if lang_code|slice:':2' == 'en' %}New account{% else %}Nueva cuenta{% endif %}</a>
+            <a href="{% url 'finanzas:category_create' %}">{% if lang_code|slice:':2' == 'en' %}New category{% else %}Nueva categor&iacute;a{% endif %}</a>
+            <a href="/admin/finanzas/financialadvicerule/">{% if lang_code|slice:':2' == 'en' %}Advice rules{% else %}Reglas de consejos{% endif %}</a>
+        </div>
+    </article>
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>{% if lang_code|slice:':2' == 'en' %}Session{% else %}Sesi&oacute;n{% endif %}</h2>
+                <p>{% if lang_code|slice:':2' == 'en' %}Connected user and admin access.{% else %}Usuario conectado y acceso de administraci&oacute;n.{% endif %}</p>
+            </div>
+        </div>
+        <div class="session-summary">
+            <span class="session-avatar">{{ user.username|first|upper }}</span>
+            <div>
+                <strong>{{ user.username }}</strong>
+                <small>
+                    {% if user.email %}
+                        {{ user.email }}
+                    {% elif lang_code|slice:':2' == 'en' %}
+                        No email registered
+                    {% else %}
+                        Sin correo registrado
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </article>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h2>{% if lang_code|slice:':2' == 'en' %}Accounts{% else %}Cuentas{% endif %}</h2>
+            <p>{% if lang_code|slice:':2' == 'en' %}Financial account editing.{% else %}Edici&oacute;n de cuentas financieras.{% endif %}</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+            <tr>
+                <th>{% if lang_code|slice:':2' == 'en' %}Name{% else %}Nombre{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Type{% else %}Tipo{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Currency{% else %}Moneda{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Initial{% else %}Inicial{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Balance{% else %}Balance{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Variation{% else %}Variacion{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for account in accounts %}
+                <tr>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Name{% else %}Nombre{% endif %}">{{ account.name }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Type{% else %}Tipo{% endif %}"><span class="table-chip">{{ account.account_type_label_ui }}</span></td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Currency{% else %}Moneda{% endif %}">{{ account.currency }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Initial{% else %}Inicial{% endif %}" class="table-amount">${{ account.opening_balance|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Balance{% else %}Balance{% endif %}" class="table-amount">${{ account.current_balance|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Variation{% else %}Variacion{% endif %}" class="table-amount {% if account.balance_delta < 0 %}budget-negative{% endif %}">${{ account.balance_delta|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}" class="table-actions">
+                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:account_edit' account.id %}">{% if lang_code|slice:':2' == 'en' %}Edit{% else %}Editar{% endif %}</a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:account_delete' account.id %}">{% if lang_code|slice:':2' == 'en' %}Delete{% else %}Eliminar{% endif %}</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7" class="empty-state">{% if lang_code|slice:':2' == 'en' %}No accounts registered.{% else %}No hay cuentas registradas.{% endif %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h2>{% if lang_code|slice:':2' == 'en' %}Categories{% else %}Categor&iacute;as{% endif %}</h2>
+            <p>{% if lang_code|slice:':2' == 'en' %}Income and expense category editing.{% else %}Edici&oacute;n de categor&iacute;as de ingreso y gasto.{% endif %}</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+            <tr>
+                <th>{% if lang_code|slice:':2' == 'en' %}Name{% else %}Nombre{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Type{% else %}Tipo{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Monthly limit{% else %}L&iacute;mite mensual{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for category in categories %}
+                <tr>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Name{% else %}Nombre{% endif %}">{{ category.name }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Type{% else %}Tipo{% endif %}"><span class="table-chip">{{ category.category_type_label_ui }}</span></td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Monthly limit{% else %}L&iacute;mite mensual{% endif %}" class="table-amount">{% if category.monthly_limit %}${{ category.monthly_limit|floatformat:2 }}{% else %}-{% endif %}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}" class="table-actions">
+                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:category_edit' category.id %}">{% if lang_code|slice:':2' == 'en' %}Edit{% else %}Editar{% endif %}</a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:category_delete' category.id %}">{% if lang_code|slice:':2' == 'en' %}Delete{% else %}Eliminar{% endif %}</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="4" class="empty-state">{% if lang_code|slice:':2' == 'en' %}No categories registered.{% else %}No hay categor&iacute;as registradas.{% endif %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endwith %}
+{% endblock %}

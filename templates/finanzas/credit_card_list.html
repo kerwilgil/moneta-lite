@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Cards{% else %}Tarjetas{% endif %}{% endblock %}
+{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Cards{% else %}Tarjetas{% endif %}{% endblock %}
+{% block content %}
+{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<section class="page-heading">
+    <div>
+        <h1>{% if lang_code|slice:':2' == 'en' %}Credit cards{% else %}Tarjetas de credito{% endif %}</h1>
+        <p>{% if lang_code|slice:':2' == 'en' %}Statement balance, minimum payment, global limit, available credit and monthly charges.{% else %}Saldo de estado, pago minimo, limite global, disponible y cargos mensuales.{% endif %}</p>
+    </div>
+    <a class="btn btn-success btn-sm" href="{% url 'finanzas:credit_card_create' %}">{% if lang_code|slice:':2' == 'en' %}New card{% else %}Nueva tarjeta{% endif %}</a>
+</section>
+
+<section class="credit-card-stack">
+    {% for card in cards %}
+        <article class="panel credit-card-panel">
+            <div class="credit-card-panel-head">
+                <div>
+                    <h2>{{ card.account.name }}</h2>
+                    <span>{% if card.statement_number %}Estado {{ card.statement_number }} · {% endif %}{{ card.utilization_percent }}% {% if lang_code|slice:':2' == 'en' %}used{% else %}usado{% endif %} · {{ card.monthly_interest_percent }}% {% if lang_code|slice:':2' == 'en' %}monthly interest{% else %}interes mensual{% endif %} · FECI {% if card.feci_applies %}1%{% else %}0%{% endif %}</span>
+                </div>
+                <span class="metric-badge {% if card.available_credit < 0 %}warning{% else %}positive{% endif %}">
+                    {% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}: ${{ card.available_credit|floatformat:2 }}
+                </span>
+            </div>
+            <div class="credit-card-metrics">
+                <div class="credit-card-metric">
+                    <span>{% if lang_code|slice:':2' == 'en' %}Global limit{% else %}Limite global{% endif %}</span>
+                    <strong>${{ card.effective_limit|floatformat:2 }}</strong>
+                </div>
+                <div class="credit-card-metric">
+                    <span>{% if lang_code|slice:':2' == 'en' %}Global balance{% else %}Saldo global{% endif %}</span>
+                    <strong>${{ card.effective_balance|floatformat:2 }}</strong>
+                </div>
+                <div class="credit-card-metric">
+                    <span>{% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}</span>
+                    <strong class="{% if card.available_credit < 0 %}budget-negative{% endif %}">${{ card.available_credit|floatformat:2 }}</strong>
+                </div>
+                <div class="credit-card-metric">
+                    <span>{% if lang_code|slice:':2' == 'en' %}Minimum payment{% else %}Pago minimo{% endif %}</span>
+                    <strong>${{ card.minimum_payment|floatformat:2 }}</strong>
+                </div>
+                <div class="credit-card-metric">
+                    <span>{% if lang_code|slice:':2' == 'en' %}Monthly charges{% else %}Cargos mensuales{% endif %}</span>
+                    <strong>${{ card.monthly_finance_charges|floatformat:2 }}</strong>
+                </div>
+            </div>
+        </article>
+    {% empty %}
+        <section class="panel">
+            <div class="empty-state-rich">
+                <span class="empty-icon" aria-hidden="true">&#128179;</span>
+                <strong>{% if lang_code|slice:':2' == 'en' %}No cards yet{% else %}Sin tarjetas aun{% endif %}</strong>
+                <p>{% if lang_code|slice:':2' == 'en' %}Add a credit card to track limit, debt, available balance and payment recommendations.{% else %}Agrega una tarjeta para controlar limite, deuda, disponible y recomendaciones de pago.{% endif %}</p>
+                <a class="btn btn-success btn-sm" href="{% url 'finanzas:credit_card_create' %}">{% if lang_code|slice:':2' == 'en' %}Add card{% else %}Agregar tarjeta{% endif %}</a>
+            </div>
+        </section>
+    {% endfor %}
+</section>
+
+<section class="panel">
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+            <tr>
+                <th>{% if lang_code|slice:':2' == 'en' %}Card{% else %}Tarjeta{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Statement{% else %}Estado{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Limit{% else %}Limite{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Balance{% else %}Saldo{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Annual / Monthly rate{% else %}Tasa anual / mensual{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Monthly interest{% else %}Interes mensual{% endif %}</th>
+                <th>FECI</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Minimum payment{% else %}Pago minimo{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Cash payment{% else %}Pago contado{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Statement / Due{% else %}Corte / Vence{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for card in cards %}
+                <tr>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Card{% else %}Tarjeta{% endif %}">{{ card.account.name }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Statement{% else %}Estado{% endif %}">{% if card.statement_number %}{{ card.statement_number }}{% else %}-{% endif %}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Limit{% else %}Limite{% endif %}" class="table-amount">${{ card.effective_limit|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Balance{% else %}Saldo{% endif %}" class="table-amount">${{ card.effective_balance|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}" class="table-amount {% if card.available_credit < 0 %}budget-negative{% endif %}">${{ card.available_credit|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Annual / Monthly rate{% else %}Tasa anual / mensual{% endif %}">{{ card.annual_interest_rate }}% / {{ card.monthly_interest_percent }}%</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Monthly interest{% else %}Interes mensual{% endif %}" class="table-amount">${{ card.monthly_interest_amount|floatformat:2 }}</td>
+                    <td data-label="FECI" class="table-amount">${{ card.monthly_feci_amount|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Minimum payment{% else %}Pago minimo{% endif %}" class="table-amount">${{ card.minimum_payment|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Cash payment{% else %}Pago contado{% endif %}" class="table-amount">${{ card.cash_payment|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Statement / Due{% else %}Corte / Vence{% endif %}">{{ card.statement_day }} / {{ card.payment_due_day }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}" class="table-actions">
+                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:credit_card_edit' card.id %}">{% if lang_code|slice:':2' == 'en' %}Edit{% else %}Editar{% endif %}</a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:credit_card_delete' card.id %}">{% if lang_code|slice:':2' == 'en' %}Delete{% else %}Eliminar{% endif %}</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="11" class="empty-state">{% if lang_code|slice:':2' == 'en' %}Add a card to enable calculations.{% else %}Agrega una tarjeta para activar los calculos.{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endwith %}
+{% endblock %}

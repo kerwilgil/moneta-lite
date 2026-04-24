@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Analytics{% else %}Reportes{% endif %}{% endblock %}
+{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Analytics{% else %}Reportes{% endif %}{% endblock %}
+{% block content %}
+{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+<section class="page-heading">
+    <div>
+        <h1>{% if lang_code|slice:':2' == 'en' %}Analytics{% else %}Reportes{% endif %}</h1>
+        <p>{% if lang_code|slice:':2' == 'en' %}Operational financial summary focused on cash flow, invoices, recurring items and category budgets.{% else %}Resumen financiero operativo con foco en flujo, facturas, recurrentes y presupuesto por categor&iacute;a.{% endif %}</p>
+    </div>
+    <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_transactions_csv' %}">{% if lang_code|slice:':2' == 'en' %}Export CSV{% else %}Exportar CSV{% endif %}</a>
+</section>
+
+<section class="metric-grid">
+    <article class="metric-card">
+        <span class="metric-icon muted">AS</span>
+        <div>
+            <p>{% if lang_code|slice:':2' == 'en' %}Assets{% else %}Activos{% endif %}</p>
+            <h2>${{ assets|floatformat:2 }}</h2>
+            <small>{% if lang_code|slice:':2' == 'en' %}Real resources, excluding card limits{% else %}Recursos reales, sin limites de tarjeta{% endif %}</small>
+        </div>
+    </article>
+    <article class="metric-card">
+        <span class="metric-icon muted">PS</span>
+        <div>
+            <p>{% if lang_code|slice:':2' == 'en' %}Liabilities{% else %}Pasivos{% endif %}</p>
+            <h2>${{ liabilities|floatformat:2 }}</h2>
+            <small>{% if lang_code|slice:':2' == 'en' %}Actual debt, not approved limits{% else %}Deuda actual, no limites aprobados{% endif %}</small>
+        </div>
+    </article>
+    <article class="metric-card metric-primary">
+        <span class="metric-icon">CN</span>
+        <div>
+            <p>{% if lang_code|slice:':2' == 'en' %}Net equity{% else %}Capital neto{% endif %}</p>
+            <h2>${{ capital|floatformat:2 }}</h2>
+            <small>{% if lang_code|slice:':2' == 'en' %}Assets minus liabilities{% else %}Activos menos pasivos{% endif %}</small>
+        </div>
+    </article>
+</section>
+
+<section class="panel analytics-cash-panel">
+    <div class="panel-header">
+        <div>
+            <h2>{% if lang_code|slice:':2' == 'en' %}Monthly cash flow{% else %}Flujo del mes{% endif %}</h2>
+            <p>{% if lang_code|slice:':2' == 'en' %}Income, expenses and net result for the current period.{% else %}Ingresos, gastos y resultado neto del periodo actual.{% endif %}</p>
+        </div>
+    </div>
+    <div class="mini-metric-grid">
+        <article class="mini-metric-card">
+            <span>{% if lang_code|slice:':2' == 'en' %}Income{% else %}Ingresos{% endif %}</span>
+            <strong>${{ income|floatformat:2 }}</strong>
+        </article>
+        <article class="mini-metric-card">
+            <span>{% if lang_code|slice:':2' == 'en' %}Expenses{% else %}Gastos{% endif %}</span>
+            <strong>${{ expenses|floatformat:2 }}</strong>
+        </article>
+        <article class="mini-metric-card">
+            <span>{% if lang_code|slice:':2' == 'en' %}Card payments{% else %}Pagos de tarjeta{% endif %}</span>
+            <strong>${{ card_payments|floatformat:2 }}</strong>
+        </article>
+        <article class="mini-metric-card">
+            <span>{% if lang_code|slice:':2' == 'en' %}Net flow{% else %}Flujo neto{% endif %}</span>
+            <strong>${{ cash_flow|floatformat:2 }}</strong>
+        </article>
+    </div>
+</section>
+
+<section class="panel analytics-budget-panel">
+    <div class="panel-header">
+        <div>
+            <h2>{% if lang_code|slice:':2' == 'en' %}Budget by category{% else %}Presupuesto por categor&iacute;a{% endif %}</h2>
+            <p>{% if lang_code|slice:':2' == 'en' %}Monthly control against each configured expense-category limit.{% else %}Control mensual seg&uacute;n el l&iacute;mite configurado en cada categor&iacute;a de gasto.{% endif %}</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+            <tr>
+                <th>{% if lang_code|slice:':2' == 'en' %}Category{% else %}Categor&iacute;a{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Spent{% else %}Consumido{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Limit{% else %}L&iacute;mite{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}</th>
+                <th>{% if lang_code|slice:':2' == 'en' %}Usage{% else %}Uso{% endif %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in category_budget %}
+                <tr>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Category{% else %}Categor&iacute;a{% endif %}">{{ row.category.display_name_ui }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Spent{% else %}Consumido{% endif %}" class="table-amount">${{ row.spent|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Limit{% else %}L&iacute;mite{% endif %}" class="table-amount">${{ row.limit|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}" class="table-amount {% if row.remaining < 0 %}budget-negative{% endif %}">${{ row.remaining|floatformat:2 }}</td>
+                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Usage{% else %}Uso{% endif %}">
+                        <div class="budget-usage">
+                            <span>{{ row.usage_percent|floatformat:2 }}%</span>
+                            <div class="progress">
+                                <div class="progress-bar {% if row.status == 'over' %}bg-danger{% elif row.status == 'warning' %}bg-warning{% else %}bg-success{% endif %}" role="progressbar" style="width: {% if row.usage_percent > 100 %}100{% else %}{{ row.usage_percent }}{% endif %}%" aria-valuenow="{{ row.usage_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" class="empty-state">{% if lang_code|slice:':2' == 'en' %}Set a monthly limit for expense categories to activate this report.{% else %}Define un l&iacute;mite mensual en categor&iacute;as de tipo gasto para activar este reporte.{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="dashboard-grid secondary analytics-detail-grid">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>{% if lang_code|slice:':2' == 'en' %}Expenses by category{% else %}Gastos por categor&iacute;a{% endif %}</h2>
+                <p>{% if lang_code|slice:':2' == 'en' %}Expense distribution for confirmed spending this month.{% else %}Distribuci&oacute;n del gasto confirmado del mes.{% endif %}</p>
+            </div>
+        </div>
+        <div class="roadmap-list expense-breakdown">
+            {% for row in expense_breakdown %}
+                <span>
+                    <strong>{{ row.category_name_ui }}</strong>
+                    <small>${{ row.total|floatformat:2 }}</small>
+                </span>
+            {% empty %}
+                <span>{% if lang_code|slice:':2' == 'en' %}No categorized expenses this month.{% else %}No hay gastos categorizados este mes.{% endif %}</span>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>{% if lang_code|slice:':2' == 'en' %}Budget alerts{% else %}Alertas de presupuesto{% endif %}</h2>
+                <p>{% if lang_code|slice:':2' == 'en' %}Overspending indicators and categories at risk.{% else %}Indicadores de sobreconsumo y categor&iacute;as en zona de riesgo.{% endif %}</p>
+            </div>
+        </div>
+        <div class="advice-list">
+            {% if categories_over_limit %}
+                {% for row in categories_over_limit %}
+                    <div class="advice-item budget-alert budget-alert-over">
+                        <strong>{{ row.category.display_name_ui }}</strong>
+                        <span>{% if lang_code|slice:':2' == 'en' %}Exceeded by{% else %}Excedido por{% endif %} ${{ row.remaining|floatformat:2 }} ({{ row.usage_percent|floatformat:2 }}%).</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% if categories_warning %}
+                {% for row in categories_warning %}
+                    <div class="advice-item budget-alert budget-alert-warning">
+                        <strong>{{ row.category.display_name_ui }}</strong>
+                        <span>{% if lang_code|slice:':2' == 'en' %}High usage:{% else %}Uso alto:{% endif %} {{ row.usage_percent|floatformat:2 }}% {% if lang_code|slice:':2' == 'en' %}of monthly limit.{% else %}del l&iacute;mite mensual.{% endif %}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% if not categories_over_limit and not categories_warning %}
+                <div class="advice-item">
+                    <strong>{% if lang_code|slice:':2' == 'en' %}No critical alerts{% else %}Sin alertas cr&iacute;ticas{% endif %}</strong>
+                    <span>{% if lang_code|slice:':2' == 'en' %}Category usage remains within expected range.{% else %}El uso de categor&iacute;as con l&iacute;mite se mantiene dentro del rango esperado.{% endif %}</span>
+                </div>
+            {% endif %}
+        </div>
+    </article>
+</section>
+{% endwith %}
+{% endblock %}
