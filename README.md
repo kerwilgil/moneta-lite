@@ -55,6 +55,10 @@ Luego entra en `http://127.0.0.1:8000/`.
 - Usa `DEBUG=False` y configura `ALLOWED_HOSTS` si lo expones en red.
 - No subas `db.sqlite3` si contiene datos personales.
 
+## Licencia
+
+Moneta Lite se publica bajo licencia MIT. Ver `LICENSE`.
+
 ## Edicion
 
 Moneta Lite es la version de entrada. Los modulos avanzados como recurrentes, libro contable, ingreso neto y exportaciones avanzadas no estan incluidos en esta edicion.
