@@ -1,120 +1,218 @@
 # Guia De Instalacion De Moneta
 
-Esta guia cubre una instalacion local, en NAS o en un servidor Linux. Para una prueba rapida usa `QUICKSTART.md`.
+Esta guia explica como instalar Moneta paso a paso. Esta pensada para usuarios con poca experiencia tecnica.
 
-## 1. Preparar El Proyecto
+Para una prueba rapida en pocos minutos, usa `QUICKSTART.md`.
 
-Descarga o descomprime Moneta en una carpeta de trabajo.
+## 1. Elegir Donde Instalar
 
-Ejemplo en Windows:
+Puedes instalar Moneta en:
 
-```powershell
+- Tu PC con Windows.
+- Una Mac.
+- Una computadora Linux.
+- Un NAS o servidor local, por ejemplo QNAP.
+- Un servidor en Internet.
+
+Si solo quieres probar, usa tu PC y ejecuta Moneta en:
+
+```text
+http://127.0.0.1:8000/
+```
+
+Si quieres acceder desde otra PC de tu red, ejecuta Moneta en:
+
+```text
+http://IP_DEL_SERVIDOR:8000/
+```
+
+## 2. Preparar La Carpeta
+
+Descarga o descomprime Moneta en una carpeta facil de encontrar.
+
+Ejemplo Windows:
+
+```text
 C:\Moneta\moneta-pro
 ```
 
-Ejemplo en Linux/NAS:
+Ejemplo Mac/Linux/NAS:
 
-```bash
+```text
 /opt/moneta/moneta-pro
 ```
 
-## 2. Crear Entorno Virtual
+## 3. Abrir La Terminal Correcta
 
-Windows:
+### Windows PowerShell
+
+1. Abre la carpeta de Moneta.
+2. Haz clic derecho en un espacio vacio.
+3. Selecciona `Abrir en Terminal` o `Abrir PowerShell aqui`.
+
+Usa comandos marcados como `powershell`.
+
+### Windows CMD
+
+1. Abre `Simbolo del sistema` o `CMD`.
+2. Entra a la carpeta de Moneta:
+
+```cmd
+cd C:\Moneta\moneta-pro
+```
+
+Usa comandos marcados como `cmd`.
+
+### Mac / Linux / NAS
+
+1. Abre `Terminal`.
+2. Entra a la carpeta de Moneta:
+
+```bash
+cd /opt/moneta/moneta-pro
+```
+
+Usa comandos marcados como `bash`.
+
+## 4. Crear Entorno Virtual
+
+El entorno virtual guarda las dependencias de Moneta separadas del resto del sistema.
+
+Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-Linux/NAS:
+Windows CMD:
+
+```cmd
+python -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+Mac / Linux / NAS:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-## 3. Instalar Dependencias
+Si todo esta bien, veras `(.venv)` al inicio de la linea de comandos.
+
+## 5. Instalar Dependencias
+
+Ejecuta dentro de la carpeta de Moneta:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 4. Configurar Variables
+Este paso puede tardar varios minutos.
 
-Copia `.env.example` como `.env`.
+## 6. Crear El Archivo De Configuracion
 
-Windows:
+Moneta usa un archivo `.env` para guardar configuracion privada.
 
-```powershell
+Windows PowerShell o CMD:
+
+```cmd
 copy .env.example .env
 ```
 
-Linux/NAS:
+Mac / Linux / NAS:
 
 ```bash
 cp .env.example .env
 ```
 
-Edita `.env` y revisa como minimo:
+Abre `.env` con un editor de texto y revisa:
 
 ```env
 DJANGO_SECRET_KEY=coloca-una-clave-larga-y-privada
-DJANGO_DEBUG=0
-DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,IP_O_DOMINIO
-DJANGO_CSRF_TRUSTED_ORIGINS=https://tu-dominio.com
+DJANGO_DEBUG=1
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 SAAS_EDITION=pro
 ```
 
-Para uso local sin exponer a Internet puedes dejar `DJANGO_DEBUG=1`, pero no es recomendable para produccion.
+Para publicar en Internet, cambia:
 
-## 5. Crear Base De Datos
+```env
+DJANGO_DEBUG=0
+DJANGO_ALLOWED_HOSTS=tu-dominio.com,IP_DEL_SERVIDOR
+DJANGO_CSRF_TRUSTED_ORIGINS=https://tu-dominio.com
+```
+
+## 7. Crear Base De Datos
 
 ```bash
 python manage.py migrate
 ```
 
-## 6. Crear Usuario Administrador
+Esto crea las tablas necesarias.
+
+## 8. Crear Usuario Administrador
 
 ```bash
 python manage.py createsuperuser
 ```
 
-Usa una clave fuerte. No uses `admin/admin` en un entorno real.
+El sistema pedira usuario, correo y contrasena.
 
-## 7. Ejecutar El Servidor
+Recomendacion:
 
-Uso local:
+- No uses `admin/admin`.
+- Usa una contrasena fuerte.
+- Guarda el usuario en un lugar seguro.
+
+## 9. Ejecutar Moneta
+
+Solo en tu PC:
 
 ```bash
 python manage.py runserver 127.0.0.1:8000
 ```
 
-Uso dentro de una red local:
+Abre:
+
+```text
+http://127.0.0.1:8000/
+```
+
+Para acceder desde otra PC de tu red:
 
 ```bash
 python manage.py runserver 0.0.0.0:8000
 ```
 
-Acceso desde otra PC:
+Abre desde otra PC:
 
 ```text
 http://IP_DEL_SERVIDOR:8000/
 ```
 
-## 8. Recomendacion Para NAS
+## 10. Instalacion En NAS O QNAP
 
-En un NAS tipo QNAP o servidor Linux, lo ideal es:
+En QNAP o NAS Linux:
 
-- Guardar Moneta en una carpeta fija.
-- Usar un usuario dedicado para ejecutar el servicio.
-- Mantener `.env` fuera de repositorios publicos.
-- Configurar una tarea o servicio para iniciar Moneta automaticamente.
-- Usar proxy inverso con HTTPS si sera accesible fuera de la red local.
+1. Copia Moneta en una carpeta fija.
+2. Instala Python 3 si el NAS no lo tiene.
+3. Abre terminal/SSH.
+4. Entra a la carpeta de Moneta.
+5. Ejecuta los pasos de Mac/Linux/NAS.
 
-## 9. Produccion
+Recomendado:
 
-Antes de exponer Moneta a Internet:
+- Usar una IP fija para el NAS.
+- Mantener `.env` privado.
+- Hacer respaldo de la base de datos.
+- Usar HTTPS si vas a acceder fuera de casa/oficina.
+- Configurar un servicio o tarea para iniciar Moneta automaticamente.
+
+## 11. Verificaciones Antes De Publicar En Internet
+
+Ejecuta:
 
 ```bash
 python manage.py test
@@ -131,7 +229,7 @@ Configuracion minima:
 - Base de datos respaldada.
 - Usuario admin con clave fuerte.
 
-## 10. Actualizaciones
+## 12. Actualizaciones
 
 Antes de actualizar:
 
@@ -144,11 +242,13 @@ Antes de actualizar:
 python manage.py migrate
 ```
 
-5. Reinicia el servicio.
+5. Reinicia Moneta.
 
-## 11. Soporte Guiado
+## 13. Soporte Guiado
 
-La instalacion guiada es un servicio adicional donde se ayuda al comprador a dejar Moneta funcionando en su PC, NAS o servidor. Puede incluir:
+La instalacion guiada es un servicio adicional donde se ayuda al comprador a dejar Moneta funcionando en su PC, NAS o servidor.
+
+Puede incluir:
 
 - Revision de requisitos.
 - Configuracion de `.env`.
