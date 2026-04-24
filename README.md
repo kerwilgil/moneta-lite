@@ -24,6 +24,18 @@
 
 ## Instalacion Local
 
+Guia rapida:
+
+```text
+QUICKSTART.md
+```
+
+Instalacion completa:
+
+```text
+INSTALL.md
+```
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\activate
@@ -46,3 +58,19 @@ Luego entra en `http://127.0.0.1:8000/`.
 ## Edicion
 
 Moneta Lite es la version de entrada. Los modulos avanzados como recurrentes, libro contable, ingreso neto y exportaciones avanzadas no estan incluidos en esta edicion.
+
+## Version Pro
+
+Moneta Pro incluye los modulos avanzados para uso completo.
+
+Enlace de compra:
+
+```text
+PROXIMAMENTE: agregar aqui el enlace de Lemon Squeezy
+```
+
+Cuando el enlace este activo, reemplaza este bloque por:
+
+```markdown
+Compra Moneta Pro: https://tu-enlace-de-compra
+```
