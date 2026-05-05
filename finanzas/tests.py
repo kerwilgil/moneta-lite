@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from .accounting import rebuild_account_balances
+from .accounting import rebuild_account_balances, sync_credit_card_account_balance
 from .forms import RecurringPaymentForm, TransactionForm
 from .models import Account, Category, CreditCard, FinancialTransaction, RecurringPayment
 
@@ -84,6 +84,18 @@ class FinanceLogicTests(TestCase):
         self.assertEqual(card.utilization_percent, Decimal("66.68"))
         self.assertEqual(card.monthly_interest_amount, Decimal("176.29"))
         self.assertEqual(card.monthly_feci_amount, Decimal("9.60"))
+
+    def test_sync_credit_card_balance_accepts_plain_account_without_card(self):
+        account = Account.objects.create(
+            user=self.user,
+            name="Nueva cuenta",
+            account_type=Account.AccountType.CHECKING,
+            opening_balance=Decimal("250.00"),
+            current_balance=Decimal("250.00"),
+        )
+        sync_credit_card_account_balance(account)
+        account.refresh_from_db()
+        self.assertEqual(account.current_balance, Decimal("250.00"))
 
     def test_transaction_category_must_match_transaction_type(self):
         form = TransactionForm(

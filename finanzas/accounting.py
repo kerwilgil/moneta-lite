@@ -28,6 +28,12 @@ def ensure_system_account(user, name, account_type):
 
 
 def sync_credit_card_account_balance(card):
+    if isinstance(card, Account):
+        try:
+            card = card.creditcard
+        except CreditCard.DoesNotExist:
+            return
+
     account = card.account
     account.opening_balance = _as_money(card.current_debt)
     account.current_balance = _as_money(card.current_debt)
