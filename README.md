@@ -36,6 +36,14 @@ Instalacion completa:
 INSTALL.md
 ```
 
+Ayuda adicional:
+
+```text
+FAQ.md
+SUPPORT.md
+CHANGELOG.md
+```
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\activate
