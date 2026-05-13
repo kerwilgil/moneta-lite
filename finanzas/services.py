@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.db.models import Sum
 from django.utils import timezone
 
-from .models import Account, Category, CreditCard, FinancialTransaction, RecurringPayment
+from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, RecurringPayment
 
 
 def money_total(queryset, field="amount"):
@@ -13,6 +13,15 @@ def money_total(queryset, field="amount"):
 
 def credit_card_debt_total(user):
     return money_total(CreditCard.objects.filter(user=user), "current_debt")
+
+
+def mark_overdue_invoices(user, today=None):
+    today = today or timezone.localdate()
+    return Invoice.objects.filter(
+        user=user,
+        status=Invoice.Status.PENDING,
+        due_date__lt=today,
+    ).update(status=Invoice.Status.OVERDUE)
 
 
 def _month_start(base_date):
@@ -215,8 +224,8 @@ def dashboard_summary(user):
     }
 
 
-def advice_for_user(user):
-    summary = dashboard_summary(user)
+def advice_for_user(user, summary=None):
+    summary = summary or dashboard_summary(user)
     advice = []
 
     if summary["expenses"] > summary["income"] and summary["income"]:

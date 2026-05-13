@@ -23,7 +23,7 @@ if not SECRET_KEY:
         raise ImproperlyConfigured("Define DJANGO_SECRET_KEY cuando DJANGO_DEBUG=0.")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
-APP_EDITION = normalize_edition(os.getenv("SAAS_EDITION", "lite"))
+APP_EDITION = normalize_edition(os.getenv("SAAS_EDITION", "demo"))
 APP_FEATURES = edition_features(APP_EDITION)
 APP_NAME = os.getenv("SAAS_APP_NAME", "Moneta")
 APP_DESCRIPTION_ES = os.getenv("SAAS_APP_DESCRIPTION_ES", "Moneta - finanzas personales, contabilidad y flujo de caja.")
@@ -42,6 +42,7 @@ APP_LOGIN_DESCRIPTION_EN = os.getenv(
     "SAAS_LOGIN_DESCRIPTION_EN",
     "Track finance, debt and capital from a single workspace.",
 )
+MONETA_FECI_ANNUAL_RATE_PERCENT = os.getenv("MONETA_FECI_ANNUAL_RATE_PERCENT", "1.00")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

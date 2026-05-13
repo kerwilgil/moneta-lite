@@ -11,6 +11,7 @@ from django.db import IntegrityError
 from django.db.models import ProtectedError
 from django.db.models import F, Q, Sum
 from django.http import HttpResponse
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import translation
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -40,7 +41,11 @@ from .forms import (
 )
 from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine, RecurringPayment
 from .product import require_feature
-from .services import advice_for_user, dashboard_summary, monthly_cash_flow_series
+from .services import advice_for_user, dashboard_summary, mark_overdue_invoices, monthly_cash_flow_series
+
+
+LIST_PAGE_SIZE = 100
+EXPORT_ROW_LIMIT = 5000
 
 
 TX_TYPE_LABELS = {
@@ -285,18 +290,24 @@ def recurring_overview(queryset):
 
     rows = queryset.values_list("amount", "frequency", "next_due_date", "is_active")
     for amount, frequency, next_due_date, is_active in rows:
+        if not is_active:
+            continue
         amount = amount or Decimal("0.00")
         monthly_projection += amount * monthly_frequency_factor(frequency)
-        if is_active:
-            active_count += 1
-            if next_due_date and today <= next_due_date <= limit:
-                due_next_30 += amount
+        active_count += 1
+        if next_due_date and today <= next_due_date <= limit:
+            due_next_30 += amount
 
     return {
         "monthly_projection": monthly_projection.quantize(Decimal("0.01")),
         "due_next_30": due_next_30.quantize(Decimal("0.01")),
         "active_count": active_count,
     }
+
+
+def paginate_queryset(request, queryset, per_page=LIST_PAGE_SIZE):
+    paginator = Paginator(queryset, per_page)
+    return paginator.get_page(request.GET.get("page"))
 
 
 def subscription_icon(service_name):
@@ -583,8 +594,9 @@ def confirm_delete(request, instance, success_url, label):
 
 @login_required
 def dashboard(request):
+    mark_overdue_invoices(request.user)
     context = dashboard_summary(request.user)
-    context["advice"] = advice_for_user(request.user)
+    context["advice"] = advice_for_user(request.user, context)
     english = is_english(request)
     context["cash_flow_series"] = monthly_cash_flow_series(request.user, english=english)
     for account in context.get("accounts", []):
@@ -672,7 +684,8 @@ def transaction_list(request):
     income = summary["income"] or Decimal("0.00")
     expense = summary["expense"] or Decimal("0.00")
     card_payment = summary["card_payment"] or Decimal("0.00")
-    transactions = list(base_queryset[:200])
+    page_obj = paginate_queryset(request, base_queryset)
+    transactions = list(page_obj)
     for transaction in transactions:
         transaction.transaction_type_label_ui = localized_label(
             TX_TYPE_LABELS,
@@ -692,6 +705,7 @@ def transaction_list(request):
         "finanzas/transaction_list.html",
         {
             "transactions": transactions,
+            "page_obj": page_obj,
             "type_choices": localized_choices(FinancialTransaction.TransactionType.choices, TX_TYPE_LABELS, english),
             "status_choices": localized_choices(FinancialTransaction.Status.choices, TX_STATUS_LABELS, english),
             "accounts": Account.objects.filter(user=request.user, is_active=True).order_by("name"),
@@ -870,6 +884,7 @@ def category_delete(request, pk):
 @login_required
 def invoice_list(request):
     english = is_english(request)
+    mark_overdue_invoices(request.user)
     queryset = Invoice.objects.filter(user=request.user).select_related("journal_entry").order_by("-issue_date", "-id")
     query = request.GET.get("q", "").strip()
     invoice_type = request.GET.get("invoice_type", "").strip()
@@ -894,7 +909,8 @@ def invoice_list(request):
         paid=Sum("total_amount", filter=Q(status=Invoice.Status.PAID)),
         overdue=Sum("total_amount", filter=Q(status=Invoice.Status.OVERDUE)),
     )
-    invoices = list(queryset[:200])
+    page_obj = paginate_queryset(request, queryset)
+    invoices = list(page_obj)
     for invoice in invoices:
         invoice.invoice_type_label_ui = localized_label(
             INVOICE_TYPE_LABELS,
@@ -914,6 +930,7 @@ def invoice_list(request):
         "finanzas/invoice_list.html",
         {
             "invoices": invoices,
+            "page_obj": page_obj,
             "invoice_type_choices": localized_choices(Invoice.InvoiceType.choices, INVOICE_TYPE_LABELS, english),
             "invoice_status_choices": localized_choices(Invoice.Status.choices, INVOICE_STATUS_LABELS, english),
             "filters": {
@@ -1001,7 +1018,8 @@ def recurring_list(request):
         queryset = queryset.filter(is_active=False)
 
     overview = recurring_overview(queryset)
-    payments = list(queryset[:200])
+    page_obj = paginate_queryset(request, queryset)
+    payments = list(page_obj)
     for payment in payments:
         payment.frequency_label_ui = localized_label(
             FREQUENCY_LABELS,
@@ -1023,6 +1041,7 @@ def recurring_list(request):
         "finanzas/recurring_list.html",
         {
             "payments": payments,
+            "page_obj": page_obj,
             "filters": {"active": active_filter},
             "summary_monthly_projection": overview["monthly_projection"],
             "summary_due_next_30": overview["due_next_30"],
@@ -1105,7 +1124,8 @@ def subscription_list(request):
         queryset = queryset.filter(is_active=False)
 
     overview = recurring_overview(queryset)
-    subscriptions = queryset[:200]
+    page_obj = paginate_queryset(request, queryset)
+    subscriptions = list(page_obj)
     preset_map = subscription_preset_map()
     subscription_rows = []
     for subscription in subscriptions:
@@ -1147,6 +1167,7 @@ def subscription_list(request):
         "finanzas/subscription_list.html",
         {
             "subscription_rows": subscription_rows,
+            "page_obj": page_obj,
             "subscription_presets": sorted(
                 [] if is_lite_edition() else service_subscription_presets(),
                 key=lambda p: p["name"].lower(),
@@ -1284,8 +1305,9 @@ def credit_card_delete(request, pk):
 @login_required
 @require_feature("ledger")
 def ledger(request):
-    entries = JournalEntry.objects.filter(user=request.user).prefetch_related("lines__account")[:80]
-    return render(request, "finanzas/ledger.html", {"entries": entries})
+    entries = JournalEntry.objects.filter(user=request.user).prefetch_related("lines__account")
+    page_obj = paginate_queryset(request, entries)
+    return render(request, "finanzas/ledger.html", {"entries": list(page_obj), "page_obj": page_obj})
 
 
 @login_required
@@ -1347,7 +1369,7 @@ def reports(request):
 def showcase_page(request):
     english = is_english(request)
     context = dashboard_summary(request.user)
-    context["advice"] = advice_for_user(request.user)
+    context["advice"] = advice_for_user(request.user, context)
     context["cash_flow_series"] = monthly_cash_flow_series(request.user, english=english)
     context["showcase_features"] = [
         {
@@ -1456,7 +1478,7 @@ def export_transactions_csv(request):
         "destination_account",
         "related_credit_card__account",
         "category",
-    )
+    ).order_by("-date", "-id")[:EXPORT_ROW_LIMIT]
     for tx in transactions:
         writer.writerow(
             [
@@ -1482,7 +1504,7 @@ def export_invoices_csv(request):
     writer = csv.writer(response)
     writer.writerow(["Numero", "Tipo", "Contacto", "Emision", "Vence", "Subtotal", "Impuesto", "Total", "Estado"])
 
-    invoices = Invoice.objects.filter(user=request.user).order_by("-issue_date", "-id")
+    invoices = Invoice.objects.filter(user=request.user).order_by("-issue_date", "-id")[:EXPORT_ROW_LIMIT]
     for invoice in invoices:
         writer.writerow(
             [
@@ -1511,7 +1533,7 @@ def export_recurring_csv(request):
     payments = (
         RecurringPayment.objects.filter(user=request.user, is_subscription=False)
         .select_related("account", "category")
-        .order_by("next_due_date", "name")
+        .order_by("next_due_date", "name")[:EXPORT_ROW_LIMIT]
     )
     for payment in payments:
         writer.writerow(
@@ -1539,7 +1561,7 @@ def export_subscriptions_csv(request):
     subscriptions = (
         RecurringPayment.objects.filter(user=request.user, is_subscription=True)
         .select_related("account", "category")
-        .order_by("next_due_date", "name")
+        .order_by("next_due_date", "name")[:EXPORT_ROW_LIMIT]
     )
     for subscription in subscriptions:
         writer.writerow(

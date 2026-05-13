@@ -1,10 +1,11 @@
 from decimal import Decimal
 
 from django import forms
-from django.forms import formset_factory
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.forms import formset_factory
 
-from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine, RecurringPayment
+from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, RecurringPayment
 
 
 class UserScopedModelForm(forms.ModelForm):
@@ -75,13 +76,19 @@ class CategoryForm(UserScopedModelForm):
             raise forms.ValidationError("Ya tienes una categoria con ese nombre y tipo.")
         return name
 
+    def clean_monthly_limit(self):
+        monthly_limit = self.cleaned_data.get("monthly_limit")
+        if monthly_limit is not None and monthly_limit <= 0:
+            raise forms.ValidationError("El limite mensual debe ser mayor que cero.")
+        return monthly_limit
+
     class Meta:
         model = Category
         fields = ["name", "category_type", "monthly_limit"]
         labels = {
             "name": "Nombre",
             "category_type": "Tipo",
-            "monthly_limit": "Límite mensual",
+            "monthly_limit": "Limite mensual",
         }
 
 
@@ -105,12 +112,12 @@ class TransactionForm(UserScopedModelForm):
         ]
         labels = {
             "transaction_type": "Tipo",
-            "description": "Descripción",
+            "description": "Descripcion",
             "counterparty": "Persona o comercio",
             "account": "Cuenta",
             "destination_account": "Cuenta destino",
             "related_credit_card": "Tarjeta relacionada",
-            "category": "Categoría",
+            "category": "Categoria",
             "amount": "Monto",
             "date": "Fecha",
             "status": "Estado",
@@ -128,7 +135,10 @@ class TransactionForm(UserScopedModelForm):
         destination_account = cleaned_data.get("destination_account")
         related_card = cleaned_data.get("related_credit_card")
         account = cleaned_data.get("account")
+        amount = cleaned_data.get("amount")
 
+        if amount is not None and amount <= 0:
+            self.add_error("amount", "El monto debe ser mayor que cero.")
         if tx_type == FinancialTransaction.TransactionType.TRANSFER and not destination_account:
             self.add_error("destination_account", "Selecciona la cuenta destino para la transferencia.")
         if tx_type == FinancialTransaction.TransactionType.TRANSFER and destination_account and account == destination_account:
@@ -157,9 +167,9 @@ class InvoiceForm(UserScopedModelForm):
         fields = ["invoice_type", "number", "counterparty", "issue_date", "due_date", "subtotal", "tax", "status"]
         labels = {
             "invoice_type": "Tipo",
-            "number": "Número",
+            "number": "Numero",
             "counterparty": "Cliente o proveedor",
-            "issue_date": "Fecha de emisión",
+            "issue_date": "Fecha de emision",
             "due_date": "Fecha de vencimiento",
             "subtotal": "Subtotal",
             "tax": "Impuesto",
@@ -169,6 +179,16 @@ class InvoiceForm(UserScopedModelForm):
             "issue_date": forms.DateInput(attrs={"type": "date"}),
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        subtotal = cleaned_data.get("subtotal")
+        tax = cleaned_data.get("tax")
+        if subtotal is not None and subtotal <= 0:
+            self.add_error("subtotal", "El subtotal debe ser mayor que cero.")
+        if tax is not None and tax < 0:
+            self.add_error("tax", "El impuesto no puede ser negativo.")
+        return cleaned_data
 
 
 class RecurringPaymentForm(UserScopedModelForm):
@@ -186,11 +206,11 @@ class RecurringPaymentForm(UserScopedModelForm):
         labels = {
             "name": "Nombre",
             "account": "Cuenta",
-            "category": "Categoría",
+            "category": "Categoria",
             "amount": "Monto",
             "frequency": "Frecuencia",
-            "next_due_date": "Próximo vencimiento",
-            "auto_create_transaction": "Crear movimiento automáticamente",
+            "next_due_date": "Proximo vencimiento",
+            "auto_create_transaction": "Crear movimiento automaticamente",
             "is_active": "Activo",
         }
         widgets = {
@@ -202,6 +222,12 @@ class RecurringPaymentForm(UserScopedModelForm):
         if category and category.category_type != Category.CategoryType.EXPENSE:
             raise forms.ValidationError("Los pagos recurrentes y suscripciones deben usar categorias de gasto.")
         return category
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get("amount")
+        if amount is not None and amount <= 0:
+            raise forms.ValidationError("El monto debe ser mayor que cero.")
+        return amount
 
 
 class CreditCardForm(UserScopedModelForm):
@@ -227,7 +253,7 @@ class CreditCardForm(UserScopedModelForm):
         ]
         labels = {
             "account": "Cuenta de tarjeta",
-            "credit_limit": "Límite",
+            "credit_limit": "Limite",
             "current_debt": "Deuda actual",
             "annual_interest_rate": "Tasa anual",
             "monthly_service_rate": "Tasa mensual estado",
@@ -239,14 +265,14 @@ class CreditCardForm(UserScopedModelForm):
             "global_limit": "Limite global",
             "global_available": "Disponible global",
             "global_balance": "Saldo global",
-            "statement_day": "Día de corte",
-            "payment_due_day": "Día límite de pago",
-            "minimum_payment_percent": "Porcentaje de pago mínimo",
+            "statement_day": "Dia de corte",
+            "payment_due_day": "Dia limite de pago",
+            "minimum_payment_percent": "Porcentaje de pago minimo",
         }
         help_texts = {
             "credit_limit": "Limite aprobado de la tarjeta.",
             "current_debt": "Monto usado o deuda pendiente. El disponible se calcula como limite menos deuda.",
-            "monthly_service_rate": "Si tu estado indica tasa mensual, colócala aquí. Ejemplo: 1.53.",
+            "monthly_service_rate": "Si tu estado indica tasa mensual, colocala aqui. Ejemplo: 1.53.",
             "statement_minimum_payment": "Si lo colocas, reemplaza el minimo estimado.",
             "statement_cash_payment": "Pago de contado exacto del estado.",
             "global_available": "Si lo colocas, reemplaza el disponible calculado.",
@@ -269,22 +295,39 @@ class CreditCardForm(UserScopedModelForm):
         cleaned_data = super().clean()
         credit_limit = cleaned_data.get("credit_limit")
         current_debt = cleaned_data.get("current_debt")
-        if credit_limit is not None and credit_limit < 0:
-            self.add_error("credit_limit", "El limite no puede ser negativo.")
+        annual_interest_rate = cleaned_data.get("annual_interest_rate")
+        monthly_service_rate = cleaned_data.get("monthly_service_rate")
+        minimum_payment_percent = cleaned_data.get("minimum_payment_percent")
+        statement_day = cleaned_data.get("statement_day")
+        payment_due_day = cleaned_data.get("payment_due_day")
+
+        if credit_limit is not None and credit_limit <= 0:
+            self.add_error("credit_limit", "El limite debe ser mayor que cero.")
         if current_debt is not None and current_debt < 0:
             self.add_error("current_debt", "La deuda actual no puede ser negativa.")
+        if annual_interest_rate is not None and annual_interest_rate < 0:
+            self.add_error("annual_interest_rate", "La tasa anual no puede ser negativa.")
+        if monthly_service_rate is not None and monthly_service_rate < 0:
+            self.add_error("monthly_service_rate", "La tasa mensual no puede ser negativa.")
+        if minimum_payment_percent is not None and minimum_payment_percent <= 0:
+            self.add_error("minimum_payment_percent", "El porcentaje de pago minimo debe ser mayor que cero.")
+        if statement_day is not None and not 1 <= statement_day <= 31:
+            self.add_error("statement_day", "El dia de corte debe estar entre 1 y 31.")
+        if payment_due_day is not None and not 1 <= payment_due_day <= 31:
+            self.add_error("payment_due_day", "El dia limite debe estar entre 1 y 31.")
+        for field_name in (
+            "previous_interest",
+            "statement_balance",
+            "statement_minimum_payment",
+            "statement_cash_payment",
+            "global_limit",
+            "global_available",
+            "global_balance",
+        ):
+            value = cleaned_data.get(field_name)
+            if value is not None and value < 0:
+                self.add_error(field_name, "Este valor no puede ser negativo.")
         return cleaned_data
-
-    def save(self, commit=True):
-        card = super().save(commit=False)
-        if commit:
-            card.save()
-            self.save_m2m()
-            account = card.account
-            account.opening_balance = card.current_debt
-            account.current_balance = card.current_debt
-            account.save(update_fields=["opening_balance", "current_balance", "updated_at"])
-        return card
 
 
 class JournalEntryForm(UserScopedModelForm):
@@ -293,7 +336,7 @@ class JournalEntryForm(UserScopedModelForm):
         fields = ["date", "description", "source", "posted"]
         labels = {
             "date": "Fecha",
-            "description": "Descripción",
+            "description": "Descripcion",
             "source": "Origen",
             "posted": "Publicado",
         }
@@ -359,4 +402,9 @@ class InitialSuperuserForm(forms.Form):
         password_confirm = cleaned_data.get("password_confirm")
         if password and password_confirm and password != password_confirm:
             self.add_error("password_confirm", "Las claves no coinciden.")
+        if password:
+            try:
+                validate_password(password)
+            except forms.ValidationError as exc:
+                self.add_error("password", exc)
         return cleaned_data

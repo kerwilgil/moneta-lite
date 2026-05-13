@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Sum
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 
@@ -39,6 +40,13 @@ class Account(TimeStampedModel):
     class Meta:
         ordering = ["account_type", "name"]
         unique_together = ["user", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                "user",
+                Lower("name"),
+                name="unique_account_name_ci_per_user",
+            )
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.get_account_type_display()})"
@@ -63,6 +71,14 @@ class Category(TimeStampedModel):
         ordering = ["category_type", "name"]
         unique_together = ["user", "name", "category_type"]
         verbose_name_plural = "categories"
+        constraints = [
+            models.UniqueConstraint(
+                "user",
+                "category_type",
+                Lower("name"),
+                name="unique_category_name_ci_per_user_type",
+            )
+        ]
 
     def __str__(self):
         return self.name
@@ -312,13 +328,14 @@ class CreditCard(TimeStampedModel):
 
     @property
     def feci_annual_rate_percent(self):
-        return Decimal("1.00")
+        configured_rate = getattr(settings, "MONETA_FECI_ANNUAL_RATE_PERCENT", Decimal("1.00"))
+        return Decimal(str(configured_rate)).quantize(Decimal("0.01"))
 
     @property
     def monthly_feci_amount(self):
         if not self.feci_applies:
             return Decimal("0.00")
-        monthly_rate = Decimal("0.01") / Decimal("12")
+        monthly_rate = (self.feci_annual_rate_percent / Decimal("100")) / Decimal("12")
         return (self.interest_basis * monthly_rate).quantize(Decimal("0.01"))
 
     @property
@@ -329,8 +346,9 @@ class CreditCard(TimeStampedModel):
     def minimum_payment(self):
         if self.statement_minimum_payment is not None:
             return self.statement_minimum_payment.quantize(Decimal("0.01"))
-        amount = self.current_debt * (self.minimum_payment_percent / Decimal("100"))
-        return max(amount, Decimal("25.00")).quantize(Decimal("0.01")) if self.current_debt else Decimal("0.00")
+        balance = self.effective_balance
+        amount = balance * (self.minimum_payment_percent / Decimal("100"))
+        return max(amount, Decimal("25.00")).quantize(Decimal("0.01")) if balance else Decimal("0.00")
 
     @property
     def cash_payment(self):

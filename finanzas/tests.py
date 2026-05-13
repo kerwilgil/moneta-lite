@@ -8,9 +8,11 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .accounting import rebuild_account_balances, sync_credit_card_account_balance
-from .forms import RecurringPaymentForm, TransactionForm
-from .models import Account, Category, CreditCard, FinancialTransaction, RecurringPayment
+from .forms import CreditCardForm, InitialSuperuserForm, InvoiceForm, RecurringPaymentForm, TransactionForm
+from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, RecurringPayment
 from .product import edition_features
+from .services import mark_overdue_invoices
+from .views import recurring_overview
 
 
 class FinanceLogicTests(TestCase):
@@ -116,6 +118,141 @@ class FinanceLogicTests(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("category", form.errors)
+
+    def test_money_forms_reject_zero_or_negative_amounts(self):
+        tx_form = TransactionForm(
+            data={
+                "transaction_type": FinancialTransaction.TransactionType.EXPENSE,
+                "description": "Gasto",
+                "account": self.checking.id,
+                "category": self.expense_category.id,
+                "amount": "0.00",
+                "date": "2026-04-01",
+                "status": FinancialTransaction.Status.CLEARED,
+            },
+            user=self.user,
+        )
+        self.assertFalse(tx_form.is_valid())
+        self.assertIn("amount", tx_form.errors)
+
+        recurring_form = RecurringPaymentForm(
+            data={
+                "name": "Pago",
+                "account": self.checking.id,
+                "category": self.expense_category.id,
+                "amount": "-5.00",
+                "frequency": RecurringPayment.Frequency.MONTHLY,
+                "next_due_date": "2026-04-01",
+                "auto_create_transaction": "on",
+                "is_active": "on",
+            },
+            user=self.user,
+        )
+        self.assertFalse(recurring_form.is_valid())
+        self.assertIn("amount", recurring_form.errors)
+
+        invoice_form = InvoiceForm(
+            data={
+                "invoice_type": Invoice.InvoiceType.ISSUED,
+                "number": "N-1",
+                "counterparty": "Cliente",
+                "issue_date": "2026-04-01",
+                "due_date": "2026-04-30",
+                "subtotal": "0.00",
+                "tax": "-1.00",
+                "status": Invoice.Status.PENDING,
+            },
+            user=self.user,
+        )
+        self.assertFalse(invoice_form.is_valid())
+        self.assertIn("subtotal", invoice_form.errors)
+        self.assertIn("tax", invoice_form.errors)
+
+    def test_setup_rejects_weak_passwords(self):
+        form = InitialSuperuserForm(
+            data={
+                "username": "admin2",
+                "email": "",
+                "password": "admin",
+                "password_confirm": "admin",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+
+    def test_recurring_projection_ignores_inactive_rows(self):
+        RecurringPayment.objects.create(
+            user=self.user,
+            name="Activo",
+            account=self.checking,
+            category=self.expense_category,
+            amount=Decimal("100.00"),
+            frequency=RecurringPayment.Frequency.MONTHLY,
+            next_due_date=date(2026, 4, 15),
+            is_active=True,
+        )
+        RecurringPayment.objects.create(
+            user=self.user,
+            name="Inactivo",
+            account=self.checking,
+            category=self.expense_category,
+            amount=Decimal("999.00"),
+            frequency=RecurringPayment.Frequency.MONTHLY,
+            next_due_date=date(2026, 4, 15),
+            is_active=False,
+        )
+        overview = recurring_overview(RecurringPayment.objects.filter(user=self.user))
+        self.assertEqual(overview["monthly_projection"], Decimal("100.00"))
+        self.assertEqual(overview["active_count"], 1)
+
+    def test_pending_invoice_is_marked_overdue(self):
+        invoice = Invoice.objects.create(
+            user=self.user,
+            invoice_type=Invoice.InvoiceType.ISSUED,
+            number="V-1",
+            counterparty="Cliente",
+            issue_date=date(2026, 4, 1),
+            due_date=date(2026, 4, 2),
+            subtotal=Decimal("10.00"),
+            tax=Decimal("0.00"),
+            status=Invoice.Status.PENDING,
+        )
+        mark_overdue_invoices(self.user, today=date(2026, 4, 3))
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, Invoice.Status.OVERDUE)
+
+    def test_credit_card_form_rejects_invalid_financial_values(self):
+        account = Account.objects.create(
+            user=self.user,
+            name="Mastercard",
+            account_type=Account.AccountType.CREDIT_CARD,
+            opening_balance=Decimal("0.00"),
+            current_balance=Decimal("0.00"),
+        )
+        form = CreditCardForm(
+            data={
+                "account": account.id,
+                "credit_limit": "0.00",
+                "current_debt": "-1.00",
+                "annual_interest_rate": "-1.00",
+                "monthly_service_rate": "-1.00",
+                "previous_interest": "-1.00",
+                "statement_number": "202605",
+                "statement_balance": "-1.00",
+                "statement_minimum_payment": "-1.00",
+                "statement_cash_payment": "-1.00",
+                "global_limit": "-1.00",
+                "global_available": "-1.00",
+                "global_balance": "-1.00",
+                "statement_day": "0",
+                "payment_due_day": "32",
+                "minimum_payment_percent": "0.00",
+            },
+            user=self.user,
+        )
+        self.assertFalse(form.is_valid())
+        for field_name in ("credit_limit", "current_debt", "annual_interest_rate", "statement_day", "payment_due_day"):
+            self.assertIn(field_name, form.errors)
 
 
 @override_settings(APP_EDITION="pro", APP_FEATURES=edition_features("pro"), ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"])
