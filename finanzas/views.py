@@ -275,8 +275,8 @@ def monthly_frequency_factor(frequency):
         RecurringPayment.Frequency.WEEKLY: Decimal("4.00"),
         RecurringPayment.Frequency.BIWEEKLY: Decimal("2.00"),
         RecurringPayment.Frequency.MONTHLY: Decimal("1.00"),
-        RecurringPayment.Frequency.QUARTERLY: Decimal("0.3333"),
-        RecurringPayment.Frequency.YEARLY: Decimal("0.0833"),
+        RecurringPayment.Frequency.QUARTERLY: Decimal("1") / Decimal("3"),
+        RecurringPayment.Frequency.YEARLY: Decimal("1") / Decimal("12"),
     }
     return factors.get(frequency, Decimal("1.00"))
 

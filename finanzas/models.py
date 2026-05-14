@@ -328,8 +328,11 @@ class CreditCard(TimeStampedModel):
 
     @property
     def feci_annual_rate_percent(self):
-        configured_rate = getattr(settings, "MONETA_FECI_ANNUAL_RATE_PERCENT", Decimal("1.00"))
-        return Decimal(str(configured_rate)).quantize(Decimal("0.01"))
+        try:
+            configured_rate = getattr(settings, "MONETA_FECI_ANNUAL_RATE_PERCENT", Decimal("1.00"))
+            return Decimal(str(configured_rate)).quantize(Decimal("0.01"))
+        except Exception:
+            return Decimal("1.00")
 
     @property
     def monthly_feci_amount(self):

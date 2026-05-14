@@ -6,10 +6,55 @@ from django.shortcuts import redirect
 
 
 EDITION_LABELS = {
+    "demo": "Demo",
     "lite": "Lite",
+    "pro": "Pro",
+    "personal": "Personal",
 }
 
 EDITION_FEATURES = {
+    "demo": {
+        "reports",
+        "transactions",
+        "invoices",
+        "recurring",
+        "subscriptions",
+        "credit_cards",
+        "ledger",
+        "net_income",
+        "settings",
+        "admin_link",
+        "exports_basic",
+        "exports_advanced",
+    },
+    "pro": {
+        "reports",
+        "transactions",
+        "invoices",
+        "recurring",
+        "subscriptions",
+        "credit_cards",
+        "ledger",
+        "net_income",
+        "settings",
+        "admin_link",
+        "exports_basic",
+        "exports_advanced",
+    },
+    "personal": {
+        "reports",
+        "transactions",
+        "invoices",
+        "recurring",
+        "subscriptions",
+        "credit_cards",
+        "ledger",
+        "net_income",
+        "settings",
+        "admin_link",
+        "exports_basic",
+        "exports_advanced",
+    },
     "lite": {
         "reports",
         "transactions",
@@ -24,7 +69,8 @@ EDITION_FEATURES = {
 
 
 def normalize_edition(value):
-    return "lite"
+    edition = (value or "demo").strip().lower()
+    return edition if edition in EDITION_FEATURES else "demo"
 
 
 def edition_features(value):
@@ -32,7 +78,7 @@ def edition_features(value):
 
 
 def edition_label(value):
-    return EDITION_LABELS.get(normalize_edition(value), "Lite")
+    return EDITION_LABELS.get(normalize_edition(value), "Demo")
 
 
 def feature_enabled(name):
@@ -40,14 +86,14 @@ def feature_enabled(name):
 
 
 def edition_payload():
-    edition = normalize_edition(getattr(settings, "APP_EDITION", "lite"))
+    edition = normalize_edition(getattr(settings, "APP_EDITION", "demo"))
     return {
         "key": edition,
         "label": edition_label(edition),
-        "is_demo": False,
+        "is_demo": edition == "demo",
         "is_lite": edition == "lite",
-        "is_pro": False,
-        "is_personal": False,
+        "is_pro": edition == "pro",
+        "is_personal": edition == "personal",
     }
 
 

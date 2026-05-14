@@ -1,28 +1,36 @@
-<p align="center">
-  <img src="static/img/moneta_icon_dark.png" alt="Moneta" width="140">
-</p>
+<div align="center">
+  <img src="static/img/moneta_icon_dark.png" alt="Moneta" width="160">
+  <h1>Moneta</h1>
+  <p><strong>SaaS de finanzas personales, tarjetas, suscripciones y control contable.</strong></p>
+  <p>
+    <img alt="Django" src="https://img.shields.io/badge/Django-5.2%2B-0b5f3a?style=flat-square">
+    <img alt="Python" src="https://img.shields.io/badge/Python-3.13%2B-1f6feb?style=flat-square">
+    <img alt="Edition" src="https://img.shields.io/badge/Editions-Demo%20%7C%20Lite%20%7C%20Pro%20%7C%20Personal-c9a227?style=flat-square">
+  </p>
+</div>
 
-<h1 align="center">Moneta Lite</h1>
+Moneta es una plataforma SaaS de finanzas personales y control contable construida con Django. Permite registrar cuentas, movimientos, tarjetas de credito, suscripciones, pagos recurrentes, facturas, reportes y libro contable desde un solo panel.
 
-<p align="center">
-  Control financiero personal ligero con dashboard, cuentas, movimientos, facturas, tarjetas y seguros privados.
-</p>
+Este repositorio es la fuente principal privada del producto. Desde aqui se generan las variantes Lite, Pro y Personal.
 
-## Caracteristicas
+## Ediciones
 
-- Dashboard financiero con resumen de activos, deudas y flujo.
-- Gestion de cuentas, movimientos y facturas.
-- Modulo de tarjetas de credito con limite, disponible, deuda e interes mensual estimado.
-- Modulo de suscripciones limitado a seguros privados: vida, salud y respaldo ante incapacidad laboral o perdida de ingresos.
-- Exportaciones basicas.
+- `Demo`: entorno completo para pruebas, presentaciones y ajustes internos.
+- `Lite`: version limitada para demostracion o distribucion inicial.
+- `Pro`: version completa para entrega pagada.
+- `Personal`: version privada para uso local en PC o NAS.
 
-## Requisitos
+Las ediciones se controlan con `SAAS_EDITION` en `.env`.
 
-- Python 3.10 o superior recomendado.
-- Django 3.2.x segun `requirements.txt`.
-- SQLite para uso local.
+## Stack
 
-## Instalacion Local
+- Python + Django.
+- SQLite para desarrollo/local.
+- PostgreSQL recomendado para produccion.
+- Templates Django, Bootstrap, Chart.js y JavaScript ligero.
+- Scripts PowerShell para variantes, paquetes y tareas recurrentes.
+
+## Puesta En Marcha
 
 Guia rapida:
 
@@ -30,13 +38,13 @@ Guia rapida:
 QUICKSTART.md
 ```
 
-Instalacion completa:
+Instalacion completa para Windows, Linux, NAS o servidor:
 
 ```text
 INSTALL.md
 ```
 
-Ayuda adicional:
+Documentacion complementaria:
 
 ```text
 FAQ.md
@@ -45,44 +53,147 @@ CHANGELOG.md
 ```
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\activate
+py -3.13 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-copy .env.example .env
 python manage.py migrate
 python manage.py createsuperuser
-python manage.py runserver 127.0.0.1:8000
+python manage.py seed_demo
+python manage.py runserver 127.0.0.1:8002
 ```
 
-Luego entra en `http://127.0.0.1:8000/`.
+Si usas Python 3.14, crea un entorno limpio con ese Python. `requirements.txt` permite Django 5.2+ y Django 6.x.
+
+## Configuracion
+
+Crea un archivo `.env` tomando como base `.env.example`.
+
+Variables principales:
+
+- `DJANGO_SECRET_KEY`: clave privada de Django.
+- `DJANGO_DEBUG`: `1` para desarrollo, `0` para produccion.
+- `DJANGO_ALLOWED_HOSTS`: dominios/IP permitidos.
+- `DJANGO_CSRF_TRUSTED_ORIGINS`: origenes HTTPS confiables si hay proxy/dominio.
+- `SAAS_EDITION`: `demo`, `lite`, `pro` o `personal`.
+- `SAAS_APP_NAME`: nombre visible de la app.
+
+No subas `.env`, bases SQLite ni logs al repositorio.
+
+## Modulos
+
+- Dashboard financiero.
+- Cuentas: efectivo, banco, cuenta corriente, ahorro, inversion, tarjetas, prestamos, cuentas por cobrar/pagar y capital.
+- Movimientos: ingresos, gastos, cobros, pagos de tarjeta y transferencias.
+- Tarjetas de credito: limite, deuda, disponible, tasa mensual/anual, pago minimo, pago contado, FECI y estado de cuenta.
+- Suscripciones y pagos recurrentes.
+- Seguros privados como suscripciones: vida, salud e ingreso.
+- Facturas emitidas y recibidas.
+- Libro contable Debe/Haber.
+- Reportes y presupuestos por categoria.
+- Exportacion CSV.
+- Ingreso neto y calculadora rapida.
+
+## Variantes
+
+Crear o regenerar una variante:
+
+```powershell
+.\scripts\create_variant.ps1 -Edition lite -Force
+.\scripts\create_variant.ps1 -Edition pro -Force
+.\scripts\create_variant.ps1 -Edition personal -Force
+```
+
+Sincronizar cambios del proyecto base hacia variantes existentes:
+
+```powershell
+.\scripts\sync_variants.ps1
+```
+
+Generar paquetes publicables sin `.env`, bases SQLite ni logs:
+
+```powershell
+.\scripts\package_releases.ps1
+```
+
+Los ZIP quedan en `releases/`.
+
+## Venta Y Entrega Pro
+
+La estrategia comercial recomendada esta documentada en `COMMERCIAL.md`.
+
+- Moneta Lite: demo publica gratuita.
+- Moneta Pro: descarga pagada recomendada en Lemon Squeezy.
+- Moneta Pro + instalacion guiada: servicio adicional para dejarlo funcionando en PC, NAS o servidor.
+- Moneta Lite usa licencia MIT.
+- Moneta Pro usa licencia comercial, no redistribuible.
+- Moneta Personal es privada.
+
+Cuando tengas el enlace de compra, agregalo al README publico de Lite como llamada a la version Pro.
+
+## Automatizacion
+
+Ejecucion manual desde interfaz:
+
+- `Recurrentes` -> `Ejecutar ahora`
+- `Suscripciones` -> `Ejecutar ahora`
+
+Ejecucion por consola:
+
+```powershell
+python manage.py run_recurring --username demo --scope all
+```
+
+Opciones:
+
+- `--scope recurring`: solo pagos recurrentes.
+- `--scope subscription`: solo suscripciones.
+- `--run-date YYYY-MM-DD`: fecha de proceso especifica.
+
+Ejemplo de tarea programada en Windows:
+
+```powershell
+python manage.py run_recurring --username TU_USUARIO --scope all
+```
 
 ## Seguridad
 
-- No publiques tu archivo `.env`.
-- Cambia `SECRET_KEY` antes de usarlo en produccion.
-- Usa `DEBUG=False` y configura `ALLOWED_HOSTS` si lo expones en red.
-- No subas `db.sqlite3` si contiene datos personales.
+Antes de publicar una variante en Internet:
+
+```powershell
+python manage.py test
+python manage.py check --deploy
+python manage.py collectstatic
+```
+
+Configuracion minima de produccion:
+
+- `DJANGO_DEBUG=0`
+- `DJANGO_SECRET_KEY` fuerte y privado.
+- `DJANGO_ALLOWED_HOSTS` con dominio/IP real.
+- `DJANGO_CSRF_TRUSTED_ORIGINS` con `https://dominio.com`.
+- HTTPS obligatorio para sesiones reales.
+- `/admin/` protegido con clave fuerte y, si es posible, VPN/IP allowlist.
+
+El comando `bootstrap_admin` bloquea la clave `admin` en produccion. `seed_demo` tambien queda bloqueado con `DJANGO_DEBUG=0` salvo confirmacion explicita.
+
+Ver detalles en `security_best_practices_report.md`.
 
 ## Licencia
 
-Moneta Lite se publica bajo licencia MIT. Ver `LICENSE`.
+Este repositorio privado usa licencia privada. Ver `LICENSE`.
 
-## Edicion
+Licencias por edicion:
 
-Moneta Lite es la version de entrada. Los modulos avanzados como recurrentes, libro contable, ingreso neto y exportaciones avanzadas no estan incluidos en esta edicion.
+- Lite: `licenses/LITE-MIT.txt`.
+- Pro: `licenses/PRO-COMMERCIAL.txt`.
+- Personal: `licenses/PERSONAL-PRIVATE.txt`.
+- Demo: `licenses/DEMO-EVALUATION.txt`.
 
-## Version Pro
+## Flujo Recomendado
 
-Moneta Pro incluye los modulos avanzados para uso completo.
-
-Enlace de compra:
-
-```text
-PROXIMAMENTE: agregar aqui el enlace de Lemon Squeezy
-```
-
-Cuando el enlace este activo, reemplaza este bloque por:
-
-```markdown
-Compra Moneta Pro: https://tu-enlace-de-compra
-```
+1. Trabajar siempre sobre este repositorio privado.
+2. Probar cambios en `instances/personal-live` o entorno local.
+3. Sincronizar variantes con `scripts/sync_variants.ps1`.
+4. Validar con tests/checks.
+5. Generar ZIPs con `scripts/package_releases.ps1`.
+6. Publicar Lite como demo y entregar Pro solo despues del pago.

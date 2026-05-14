@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 
 from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, RecurringPayment
@@ -58,30 +58,44 @@ def monthly_cash_flow_series(user, months=7, english=False):
     today = timezone.localdate()
     current_month = _month_start(today)
     month_starts = [_add_months(current_month, offset) for offset in range(-(months - 1), 1)]
-    labels = [_month_label(month_start, english) for month_start in month_starts]
-    values = []
+    labels = [_month_label(ms, english) for ms in month_starts]
 
-    for month_start in month_starts:
-        month_transactions = FinancialTransaction.objects.filter(
+    start_date = month_starts[0]
+    end_date = _add_months(month_starts[-1], 1)
+
+    rows = (
+        FinancialTransaction.objects.filter(
             user=user,
-            date__year=month_start.year,
-            date__month=month_start.month,
+            date__gte=start_date,
+            date__lt=end_date,
             status=FinancialTransaction.Status.CLEARED,
         )
-        income = money_total(
-            month_transactions.filter(
-                transaction_type__in=[
+        .values("date__year", "date__month")
+        .annotate(
+            income=Sum(
+                "amount",
+                filter=Q(transaction_type__in=[
                     FinancialTransaction.TransactionType.INCOME,
                     FinancialTransaction.TransactionType.COLLECTION,
-                ]
-            )
+                ]),
+            ),
+            expenses=Sum("amount", filter=Q(transaction_type=FinancialTransaction.TransactionType.EXPENSE)),
+            card_payments=Sum("amount", filter=Q(transaction_type=FinancialTransaction.TransactionType.CARD_PAYMENT)),
         )
-        expenses = money_total(
-            month_transactions.filter(transaction_type=FinancialTransaction.TransactionType.EXPENSE)
+    )
+
+    totals = {
+        (row["date__year"], row["date__month"]): (
+            row["income"] or Decimal("0.00"),
+            row["expenses"] or Decimal("0.00"),
+            row["card_payments"] or Decimal("0.00"),
         )
-        card_payments = money_total(
-            month_transactions.filter(transaction_type=FinancialTransaction.TransactionType.CARD_PAYMENT)
-        )
+        for row in rows
+    }
+
+    values = []
+    for ms in month_starts:
+        income, expenses, card_payments = totals.get((ms.year, ms.month), (Decimal("0.00"), Decimal("0.00"), Decimal("0.00")))
         values.append(float((income - expenses - card_payments).quantize(Decimal("0.01"))))
 
     return {"labels": labels, "values": values}
@@ -228,7 +242,7 @@ def advice_for_user(user, summary=None):
     summary = summary or dashboard_summary(user)
     advice = []
 
-    if summary["expenses"] > summary["income"] and summary["income"]:
+    if summary["expenses"] > summary["income"]:
         advice.append(
             {
                 "title": "Flujo de caja negativo",
