@@ -140,6 +140,31 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+_cache_backend = os.getenv("DJANGO_CACHE_BACKEND", "locmem" if DEBUG else "db")
+if _cache_backend == "db":
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "django_cache",
+        }
+    }
+elif _cache_backend == "file":
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+            "LOCATION": BASE_DIR / ".cache",
+        }
+    }
+elif _cache_backend == "redis":
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": os.getenv("DJANGO_CACHE_REDIS_URL", "redis://127.0.0.1:6379/1"),
+        }
+    }
+# else: LocMemCache (Django default) — single-process only
+
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
