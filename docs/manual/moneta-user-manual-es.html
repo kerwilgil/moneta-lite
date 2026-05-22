@@ -31,41 +31,46 @@
     }
     .cover {
       min-height: 760px;
-      padding: 64px 56px;
+      padding: 72px 64px;
       color: #fff;
-      background:
-        linear-gradient(135deg, rgba(8, 52, 34, .96), rgba(15, 94, 58, .92)),
-        url("../../static/img/moneta_logo.png") right 42px top 42px / 180px auto no-repeat;
+      background: linear-gradient(155deg, #073d29 0%, #0b5f3a 58%, #0e7a4d 100%);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
     }
+    .cover .logo {
+      width: 104px;
+      height: auto;
+      margin-bottom: 58px;
+      filter: drop-shadow(0 12px 24px rgba(0,0,0,.20));
+    }
     .cover h1 {
       margin: 0;
-      max-width: 620px;
-      font-size: 58px;
-      line-height: 1.02;
+      max-width: 680px;
+      font-size: 66px;
+      line-height: 1;
       letter-spacing: 0;
     }
     .cover .subtitle {
-      max-width: 680px;
-      margin-top: 24px;
-      color: #dfece5;
-      font-size: 22px;
+      max-width: 700px;
+      margin-top: 28px;
+      color: #eef8f2;
+      font-size: 23px;
+      line-height: 1.45;
     }
     .cover .meta {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
-      margin-top: 48px;
+      margin-top: 56px;
     }
     .cover .meta div {
       border: 1px solid rgba(255,255,255,.24);
       border-radius: 8px;
       padding: 16px;
-      background: rgba(255,255,255,.08);
+      background: rgba(255,255,255,.10);
     }
-    .cover strong { display: block; font-size: 12px; text-transform: uppercase; color: #cfe5d8; }
+    .cover strong { display: block; font-size: 12px; text-transform: uppercase; color: #d9f1e3; }
     .content { padding: 42px 56px 64px; }
     h2 {
       margin: 42px 0 12px;
@@ -151,7 +156,7 @@
 <article class="page">
   <section class="cover">
     <div>
-      <img src="../../static/img/moneta_icon_light.png" alt="Moneta" width="112">
+      <img class="logo" src="../../static/img/moneta_icon_light.png" alt="Moneta">
       <h1>Manual de Uso y Manejo</h1>
       <p class="subtitle">Guia operativa para usar Moneta: cuentas, movimientos, tarjetas, facturas, recurrentes, reportes y exportaciones.</p>
       <div class="meta">
