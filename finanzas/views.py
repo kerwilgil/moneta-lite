@@ -44,6 +44,7 @@ from .forms import (
 )
 from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine, RecurringPayment
 from .product import require_feature
+from .security import client_ip
 from .services import advice_for_user, dashboard_summary, mark_overdue_invoices, monthly_cash_flow_series
 
 
@@ -1557,15 +1558,10 @@ def export_subscriptions_csv(request):
     return response
 
 
-def _client_ip(request):
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    return forwarded.split(",")[0].strip() if forwarded else request.META.get("REMOTE_ADDR", "unknown")
-
-
 @require_http_methods(["GET", "POST"])
 def login_view(request):
     from django.contrib.auth.views import LoginView
-    ip = _client_ip(request)
+    ip = client_ip(request)
     if cache.get(f"moneta_login_lock_{ip}"):
         from django.contrib.auth.forms import AuthenticationForm
         form = AuthenticationForm()

@@ -27,6 +27,11 @@
     <div class="login-brand-title">{{ product.name }}</div>
     <h1>{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}{{ product.login_title_en }}{% else %}{{ product.login_title_es }}{% endif %}</h1>
     <p>{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}{{ product.login_description_en }}{% else %}{{ product.login_description_es }}{% endif %}</p>
+    {% if login_locked %}
+    <div class="alert alert-danger" role="alert">
+        {% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Too many failed attempts. Try again in 15 minutes.{% else %}{{ error_message }}{% endif %}
+    </div>
+    {% endif %}
     <form method="post">
         {% csrf_token %}
         {{ form.non_field_errors }}
@@ -34,7 +39,7 @@
         {{ form.username }}
         <label class="form-label mt-3" for="{{ form.password.id_for_label }}">{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Password{% else %}Clave{% endif %}</label>
         {{ form.password }}
-        <button class="btn btn-success w-100 mt-4" type="submit">{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Enter{% else %}Entrar{% endif %}</button>
+        <button class="btn btn-success w-100 mt-4" type="submit" {% if login_locked %}disabled{% endif %}>{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Enter{% else %}Entrar{% endif %}</button>
         {% if setup_allowed %}
         <a class="btn btn-light w-100 mt-2" href="{% url 'finanzas:initial_setup' %}">{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Create master admin{% else %}Crear usuario master{% endif %}</a>
         {% endif %}

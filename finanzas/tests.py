@@ -3,6 +3,7 @@ from decimal import Decimal
 import unittest
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import Client, override_settings
 from django.test import TestCase
 from django.urls import reverse
@@ -449,7 +450,32 @@ class FinanceViewSmokeTests(TestCase):
             with self.subTest(route=route_name):
                 response = self.client.get(reverse(route_name))
                 self.assertEqual(response.status_code, 200)
-                self.assertIn("text/csv", response["Content-Type"])
+        self.assertIn("text/csv", response["Content-Type"])
+
+
+@override_settings(ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"], MONETA_TRUST_X_FORWARDED_FOR=False)
+class LoginLockoutTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = get_user_model().objects.create_user(username="locked", password="correct-password")
+        self.client = Client()
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_login_lockout_blocks_ip_and_ignores_untrusted_forwarded_for(self):
+        login_url = reverse("login")
+        for _ in range(10):
+            response = self.client.post(login_url, {"username": self.user.username, "password": "wrong"})
+            self.assertEqual(response.status_code, 200)
+
+        response = self.client.get(login_url, HTTP_X_FORWARDED_FOR="203.0.113.10")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Demasiados intentos fallidos")
+
+        response = self.client.post(login_url, {"username": self.user.username, "password": "correct-password"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Demasiados intentos fallidos")
 
 
 @override_settings(APP_EDITION="lite", APP_FEATURES=edition_features("lite"), ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"])

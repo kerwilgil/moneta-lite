@@ -64,6 +64,7 @@ APP_LOGIN_DESCRIPTION_EN = os.getenv(
     "Track finance, debt and capital from a single workspace.",
 )
 MONETA_FECI_ANNUAL_RATE_PERCENT = Decimal(os.getenv("MONETA_FECI_ANNUAL_RATE_PERCENT", "1.00"))
+MONETA_TRUST_X_FORWARDED_FOR = env_bool("MONETA_TRUST_X_FORWARDED_FOR", False)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
