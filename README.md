@@ -52,6 +52,15 @@ SUPPORT.md
 CHANGELOG.md
 ```
 
+Manual de uso para usuarios finales:
+
+```text
+docs/manual/user-manual-es.md
+docs/manual/moneta-user-manual-es.html
+docs/manual/user-manual-en.md
+docs/manual/moneta-user-manual-en.html
+```
+
 Documentacion tecnica interna en español:
 
 ```text

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>User Manual - Moneta</title>
+  <style>
+    :root { --ink:#17211c; --muted:#5f6f67; --line:#dce5df; --brand:#0b5f3a; --accent:#c9a227; --soft:#f5f8f6; --panel:#fff; }
+    @page { size: letter; margin: 18mm 15mm; }
+    * { box-sizing: border-box; }
+    body { margin:0; color:var(--ink); font-family:"Segoe UI", Arial, sans-serif; line-height:1.55; background:#eef4f0; }
+    .page { max-width:980px; margin:0 auto; background:var(--panel); box-shadow:0 20px 60px rgba(18,36,27,.12); }
+    .cover { min-height:760px; padding:64px 56px; color:#fff; background:linear-gradient(135deg, rgba(8,52,34,.96), rgba(15,94,58,.92)), url("../../static/img/moneta_logo.png") right 42px top 42px / 180px auto no-repeat; display:flex; flex-direction:column; justify-content:space-between; }
+    .cover h1 { margin:0; max-width:620px; font-size:58px; line-height:1.02; letter-spacing:0; }
+    .cover .subtitle { max-width:680px; margin-top:24px; color:#dfece5; font-size:22px; }
+    .cover .meta { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:48px; }
+    .cover .meta div { border:1px solid rgba(255,255,255,.24); border-radius:8px; padding:16px; background:rgba(255,255,255,.08); }
+    .cover strong { display:block; font-size:12px; text-transform:uppercase; color:#cfe5d8; }
+    .content { padding:42px 56px 64px; }
+    h2 { margin:42px 0 12px; padding-top:18px; border-top:1px solid var(--line); color:var(--brand); font-size:27px; }
+    h3 { margin:24px 0 8px; font-size:18px; color:#243b30; }
+    p { margin:0 0 12px; }
+    ul,ol { margin:8px 0 18px 22px; padding:0; }
+    li { margin:4px 0; }
+    .toc { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 18px; padding:18px; border:1px solid var(--line); border-radius:8px; background:var(--soft); }
+    .toc a { color:var(--brand); text-decoration:none; font-weight:600; }
+    .callout { margin:18px 0; padding:16px 18px; border-left:5px solid var(--accent); border-radius:8px; background:#fff8df; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin:18px 0; }
+    .card { border:1px solid var(--line); border-radius:8px; padding:16px; background:#fff; }
+    .card strong { color:var(--brand); }
+    table { width:100%; border-collapse:collapse; margin:18px 0; font-size:14px; }
+    th,td { border:1px solid var(--line); padding:10px 12px; vertical-align:top; }
+    th { background:var(--soft); color:var(--brand); text-align:left; }
+    pre { overflow:auto; padding:14px; border-radius:8px; background:#10251a; color:#e7f4ec; }
+    .footer { margin-top:44px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+    @media print { body{background:#fff;} .page{box-shadow:none; max-width:none;} .cover{min-height:245mm;} h2{break-after:avoid;} .card,.callout,table{break-inside:avoid;} }
+  </style>
+</head>
+<body>
+<article class="page">
+  <section class="cover">
+    <div>
+      <img src="../../static/img/moneta_icon_light.png" alt="Moneta" width="112">
+      <h1>User Manual</h1>
+      <p class="subtitle">Operational guide for Moneta: accounts, transactions, credit cards, invoices, recurring payments, reports and exports.</p>
+      <div class="meta">
+        <div><strong>Product</strong>Moneta</div>
+        <div><strong>Editions</strong>Demo, Lite, Pro, Personal</div>
+        <div><strong>Version</strong>2026-05-22</div>
+      </div>
+    </div>
+    <p>Prepared for end users, internal support and commercial delivery.</p>
+  </section>
+  <section class="content">
+    <h2>Table Of Contents</h2>
+    <nav class="toc">
+      <a href="#access">1. Initial access</a>
+      <a href="#dashboard">2. Financial dashboard</a>
+      <a href="#accounts">3. Accounts and categories</a>
+      <a href="#transactions">4. Transactions</a>
+      <a href="#cards">5. Credit cards</a>
+      <a href="#invoices">6. Invoices</a>
+      <a href="#recurring">7. Recurring and subscriptions</a>
+      <a href="#ledger">8. Ledger</a>
+      <a href="#reports">9. Reports and exports</a>
+      <a href="#operations">10. Operations and support</a>
+    </nav>
+    <h2 id="access">1. Initial Access</h2>
+    <p>Open your installation URL, enter username and password, and press <strong>Enter</strong>. Demo credentials after seed data:</p>
+    <pre>Username: demo
+Password: demo12345</pre>
+    <div class="callout"><strong>Security:</strong> change credentials in production. Login is temporarily locked by IP after repeated failed attempts.</div>
+    <h2 id="dashboard">2. Financial Dashboard</h2>
+    <p>The dashboard summarizes assets, liabilities, capital, income, expenses, cash flow, cards, upcoming payments and alerts.</p>
+    <div class="grid"><div class="card"><strong>Review first</strong><br>Cash flow, card debt, exceeded categories and overdue invoices.</div><div class="card"><strong>Suggested rhythm</strong><br>Weekly review and month-end close.</div></div>
+    <h2 id="accounts">3. Accounts And Categories</h2>
+    <p>Create main accounts and categories before recording transactions.</p>
+    <table><tr><th>Item</th><th>Use</th><th>Examples</th></tr><tr><td>Accounts</td><td>Where money is held or owed.</td><td>Bank, cash, savings, card, loan.</td></tr><tr><td>Categories</td><td>Transaction classification.</td><td>Payroll, groceries, transport, software.</td></tr></table>
+    <h2 id="transactions">4. Transactions</h2>
+    <p>Transactions record income, expenses, transfers, card payments and collections. Only <strong>cleared</strong> transactions affect balances and accounting.</p>
+    <table><tr><th>Type</th><th>Impact</th><th>Special data</th></tr><tr><td>Income</td><td>Increases a normal account.</td><td>Income category.</td></tr><tr><td>Expense</td><td>Decreases a normal account.</td><td>Expense category.</td></tr><tr><td>Transfer</td><td>Subtracts origin and adds destination.</td><td>Destination account required.</td></tr><tr><td>Card payment</td><td>Reduces payer account and card debt.</td><td>Related card required.</td></tr></table>
+    <h2 id="cards">5. Credit Cards</h2>
+    <p>Cards track limit, debt, available credit, interest, FECI, minimum payment and recommended payment. Create a credit-card account before adding the card.</p>
+    <div class="callout">When statement values are available, enter exact statement balance, minimum payment and cash payment. Moneta prioritizes those values.</div>
+    <h2 id="invoices">6. Invoices</h2>
+    <p>Invoices can be issued or received. Moneta calculates total as subtotal plus tax and marks overdue pending invoices automatically.</p>
+    <h2 id="recurring">7. Recurring And Subscriptions</h2>
+    <p>Recurring items automate repeated expenses or income. Subscriptions use the same engine but are managed separately for services, insurance and periodic charges.</p>
+    <ul><li>Supported frequencies: weekly, biweekly, monthly, quarterly and yearly.</li><li><strong>Run now</strong> creates due movements and avoids duplicates.</li><li>Transaction type must match category type.</li></ul>
+    <h2 id="ledger">8. Ledger</h2>
+    <p>The ledger reviews debit/credit entries. Automatic entries are created for cleared transactions and invoices.</p>
+    <div class="grid"><div class="card"><strong>Rule 1</strong><br>An entry needs at least two lines.</div><div class="card"><strong>Rule 2</strong><br>Total debit must equal total credit.</div></div>
+    <h2 id="reports">9. Reports And Exports</h2>
+    <p>Reports show cash flow, budgets, expense breakdown, invoices and recurring items. CSV exports allow backup and external analysis.</p>
+    <h2 id="operations">10. Operations And Support</h2>
+    <p>For production instances:</p>
+    <pre>python manage.py migrate
+python manage.py createcachetable
+python manage.py check --deploy</pre>
+    <p>For support, report screen, steps to reproduce, user/edition, error message and screenshot if available.</p>
+    <div class="footer">Moneta - User Manual. This document complements README, INSTALL, QUICKSTART and technical documentation.</div>
+  </section>
+</article>
+</body>
+</html>

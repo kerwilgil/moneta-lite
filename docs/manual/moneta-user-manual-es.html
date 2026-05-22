@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual de Uso - Moneta</title>
+  <style>
+    :root {
+      --ink: #17211c;
+      --muted: #5f6f67;
+      --line: #dce5df;
+      --brand: #0b5f3a;
+      --accent: #c9a227;
+      --soft: #f5f8f6;
+      --panel: #ffffff;
+    }
+    @page { size: letter; margin: 18mm 15mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.55;
+      background: #eef4f0;
+    }
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--panel);
+      box-shadow: 0 20px 60px rgba(18, 36, 27, .12);
+    }
+    .cover {
+      min-height: 760px;
+      padding: 64px 56px;
+      color: #fff;
+      background:
+        linear-gradient(135deg, rgba(8, 52, 34, .96), rgba(15, 94, 58, .92)),
+        url("../../static/img/moneta_logo.png") right 42px top 42px / 180px auto no-repeat;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .cover h1 {
+      margin: 0;
+      max-width: 620px;
+      font-size: 58px;
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+    .cover .subtitle {
+      max-width: 680px;
+      margin-top: 24px;
+      color: #dfece5;
+      font-size: 22px;
+    }
+    .cover .meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 48px;
+    }
+    .cover .meta div {
+      border: 1px solid rgba(255,255,255,.24);
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(255,255,255,.08);
+    }
+    .cover strong { display: block; font-size: 12px; text-transform: uppercase; color: #cfe5d8; }
+    .content { padding: 42px 56px 64px; }
+    h2 {
+      margin: 42px 0 12px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--brand);
+      font-size: 27px;
+    }
+    h3 { margin: 24px 0 8px; font-size: 18px; color: #243b30; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 8px 0 18px 22px; padding: 0; }
+    li { margin: 4px 0; }
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 18px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--soft);
+    }
+    .toc a { color: var(--brand); text-decoration: none; font-weight: 600; }
+    .callout {
+      margin: 18px 0;
+      padding: 16px 18px;
+      border-left: 5px solid var(--accent);
+      border-radius: 8px;
+      background: #fff8df;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 18px 0;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: #fff;
+    }
+    .card strong { color: var(--brand); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      font-size: 14px;
+    }
+    th, td { border: 1px solid var(--line); padding: 10px 12px; vertical-align: top; }
+    th { background: var(--soft); color: var(--brand); text-align: left; }
+    code {
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: #edf3ef;
+      font-family: Consolas, monospace;
+      font-size: .94em;
+    }
+    pre {
+      overflow: auto;
+      padding: 14px;
+      border-radius: 8px;
+      background: #10251a;
+      color: #e7f4ec;
+    }
+    .footer {
+      margin-top: 44px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    @media print {
+      body { background: #fff; }
+      .page { box-shadow: none; max-width: none; }
+      .cover { min-height: 245mm; }
+      h2 { break-after: avoid; }
+      .card, .callout, table { break-inside: avoid; }
+      a { color: inherit; }
+    }
+  </style>
+</head>
+<body>
+<article class="page">
+  <section class="cover">
+    <div>
+      <img src="../../static/img/moneta_icon_light.png" alt="Moneta" width="112">
+      <h1>Manual de Uso y Manejo</h1>
+      <p class="subtitle">Guia operativa para usar Moneta: cuentas, movimientos, tarjetas, facturas, recurrentes, reportes y exportaciones.</p>
+      <div class="meta">
+        <div><strong>Producto</strong>Moneta</div>
+        <div><strong>Ediciones</strong>Demo, Lite, Pro, Personal</div>
+        <div><strong>Version</strong>2026-05-22</div>
+      </div>
+    </div>
+    <p>Documento preparado para usuarios finales, soporte interno y entregas comerciales.</p>
+  </section>
+
+  <section class="content">
+    <h2>Indice</h2>
+    <nav class="toc">
+      <a href="#acceso">1. Acceso inicial</a>
+      <a href="#dashboard">2. Panel financiero</a>
+      <a href="#cuentas">3. Cuentas y categorias</a>
+      <a href="#movimientos">4. Movimientos</a>
+      <a href="#tarjetas">5. Tarjetas de credito</a>
+      <a href="#facturas">6. Facturas</a>
+      <a href="#recurrentes">7. Recurrentes y suscripciones</a>
+      <a href="#contabilidad">8. Libro contable</a>
+      <a href="#reportes">9. Reportes y exportaciones</a>
+      <a href="#produccion">10. Operacion y soporte</a>
+    </nav>
+
+    <h2 id="acceso">1. Acceso inicial</h2>
+    <p>Abre la URL de tu instalacion, escribe tu usuario y clave, y presiona <strong>Entrar</strong>. En una demo local creada con datos de ejemplo, el usuario por defecto es:</p>
+    <pre>Usuario: demo
+Clave: demo12345</pre>
+    <div class="callout"><strong>Seguridad:</strong> en produccion, cambia credenciales antes de exponer Moneta en red. Si se superan los intentos fallidos, el login se bloquea temporalmente por IP.</div>
+
+    <h2 id="dashboard">2. Panel financiero</h2>
+    <p>El panel financiero es la vista principal de operacion. Resume activos, pasivos, capital, ingresos, gastos, flujo de caja, tarjetas, proximos pagos y alertas.</p>
+    <div class="grid">
+      <div class="card"><strong>Que revisar primero</strong><br>Flujo de caja, deuda de tarjetas, categorias excedidas y facturas vencidas.</div>
+      <div class="card"><strong>Frecuencia sugerida</strong><br>Revisar semanalmente y al cierre de cada mes.</div>
+    </div>
+
+    <h2 id="cuentas">3. Cuentas y categorias</h2>
+    <p>Antes de registrar movimientos, crea las cuentas y categorias principales.</p>
+    <table>
+      <tr><th>Elemento</th><th>Uso</th><th>Ejemplos</th></tr>
+      <tr><td>Cuentas</td><td>Representan donde se guarda o debe dinero.</td><td>Banco, efectivo, ahorro, tarjeta, prestamo.</td></tr>
+      <tr><td>Categorias</td><td>Clasifican el movimiento.</td><td>Nomina, supermercado, transporte, software.</td></tr>
+    </table>
+    <ol>
+      <li>Entra a <strong>Configuracion</strong>.</li>
+      <li>Presiona <strong>Crear cuenta</strong> o <strong>Crear categoria</strong>.</li>
+      <li>Completa los campos requeridos y guarda.</li>
+    </ol>
+
+    <h2 id="movimientos">4. Movimientos</h2>
+    <p>Los movimientos registran ingresos, gastos, transferencias, pagos de tarjeta y cobros.</p>
+    <table>
+      <tr><th>Tipo</th><th>Impacto</th><th>Dato especial</th></tr>
+      <tr><td>Ingreso</td><td>Aumenta una cuenta normal.</td><td>Categoria de ingreso.</td></tr>
+      <tr><td>Gasto</td><td>Reduce una cuenta normal.</td><td>Categoria de gasto.</td></tr>
+      <tr><td>Transferencia</td><td>Resta origen y suma destino.</td><td>Cuenta destino obligatoria.</td></tr>
+      <tr><td>Pago de tarjeta</td><td>Reduce cuenta pagadora y deuda.</td><td>Tarjeta relacionada obligatoria.</td></tr>
+    </table>
+    <p>Solo los movimientos <strong>confirmados</strong> afectan saldos y asientos contables.</p>
+
+    <h2 id="tarjetas">5. Tarjetas de credito</h2>
+    <p>Las tarjetas permiten controlar limite, deuda, disponible, intereses, FECI, pago minimo y pago recomendado.</p>
+    <ol>
+      <li>Crea primero una cuenta de tipo <strong>Tarjeta de credito</strong>.</li>
+      <li>Entra a <strong>Tarjetas</strong> y selecciona <strong>Nueva tarjeta</strong>.</li>
+      <li>Completa limite, deuda, tasas, corte y fecha limite de pago.</li>
+    </ol>
+    <div class="callout">Si tienes datos exactos del estado de cuenta, usa saldo de estado, pago minimo y pago contado. Moneta prioriza esos valores sobre los calculados.</div>
+
+    <h2 id="facturas">6. Facturas</h2>
+    <p>Las facturas pueden ser emitidas o recibidas. Moneta calcula el total como subtotal mas impuesto y marca vencidas las pendientes con fecha vencida.</p>
+    <table>
+      <tr><th>Estado</th><th>Uso</th></tr>
+      <tr><td>Borrador</td><td>Aun no afecta contabilidad automatica.</td></tr>
+      <tr><td>Pendiente</td><td>Factura activa por cobrar o pagar.</td></tr>
+      <tr><td>Pagada</td><td>Factura completada.</td></tr>
+      <tr><td>Vencida</td><td>Pendiente con fecha vencida.</td></tr>
+      <tr><td>Anulada</td><td>No debe mantener asiento automatico.</td></tr>
+    </table>
+
+    <h2 id="recurrentes">7. Recurrentes y suscripciones</h2>
+    <p>Los recurrentes automatizan movimientos repetitivos. Las suscripciones usan la misma base, pero se administran separadas para servicios, seguros y cargos periodicos.</p>
+    <ul>
+      <li>Frecuencias: semanal, quincenal, mensual, trimestral y anual.</li>
+      <li>El boton <strong>Ejecutar ahora</strong> crea movimientos vencidos sin duplicarlos.</li>
+      <li>El tipo de movimiento debe coincidir con la categoria seleccionada.</li>
+    </ul>
+
+    <h2 id="contabilidad">8. Libro contable</h2>
+    <p>El libro contable permite revisar asientos Debe/Haber. Moneta crea asientos automaticos para movimientos y facturas confirmadas.</p>
+    <div class="grid">
+      <div class="card"><strong>Regla 1</strong><br>Un asiento necesita al menos dos lineas.</div>
+      <div class="card"><strong>Regla 2</strong><br>Total Debe debe ser igual a total Haber.</div>
+    </div>
+
+    <h2 id="reportes">9. Reportes y exportaciones</h2>
+    <p>Los reportes ayudan a revisar flujo, presupuestos, gastos por categoria, facturas y recurrentes. Las exportaciones CSV permiten respaldar o analizar datos fuera del sistema.</p>
+    <ul>
+      <li>Movimientos y facturas respetan filtros visibles.</li>
+      <li>Las exportaciones tienen limite de filas para proteger rendimiento.</li>
+      <li>Los CSV se sanitizan para evitar formulas peligrosas.</li>
+    </ul>
+
+    <h2 id="produccion">10. Operacion y soporte</h2>
+    <p>En produccion, una instancia debe ejecutar migraciones y preparar la tabla de cache si usa cache en base de datos.</p>
+    <pre>python manage.py migrate
+python manage.py createcachetable
+python manage.py check --deploy</pre>
+    <p>Para soporte, reporta pantalla afectada, pasos para reproducir, usuario/edicion, mensaje de error y captura si aplica.</p>
+
+    <div class="footer">Moneta - Manual de Uso y Manejo. Este documento complementa README, INSTALL, QUICKSTART y la documentacion tecnica del proyecto.</div>
+  </section>
+</article>
+</body>
+</html>
