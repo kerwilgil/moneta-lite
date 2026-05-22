@@ -17,6 +17,8 @@ class TimeStampedModel(models.Model):
 
 
 class Account(TimeStampedModel):
+    """A user-owned financial account whose balance can be rebuilt from transactions."""
+
     class AccountType(models.TextChoices):
         CASH = "cash", "Efectivo"
         CHECKING = "checking", "Cuenta corriente"
@@ -57,6 +59,8 @@ class Account(TimeStampedModel):
 
 
 class Category(TimeStampedModel):
+    """A user-owned classification for income, expenses or transfers."""
+
     class CategoryType(models.TextChoices):
         INCOME = "income", "Ingreso"
         EXPENSE = "expense", "Gasto"
@@ -85,6 +89,8 @@ class Category(TimeStampedModel):
 
 
 class FinancialTransaction(TimeStampedModel):
+    """A money movement that may affect balances and automatic journal entries."""
+
     class TransactionType(models.TextChoices):
         INCOME = "income", "Ingreso"
         EXPENSE = "expense", "Gasto"
@@ -137,6 +143,8 @@ class FinancialTransaction(TimeStampedModel):
 
 
 class JournalEntry(TimeStampedModel):
+    """Accounting entry header for manual or automatic Debe/Haber lines."""
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     date = models.DateField(default=timezone.localdate)
     description = models.CharField(max_length=200)
@@ -167,8 +175,16 @@ class JournalEntry(TimeStampedModel):
         if self.pk and self.lines.exists() and not self.is_balanced:
             raise ValidationError("El asiento contable debe tener Debe y Haber iguales.")
 
+    def save(self, *args, **kwargs):
+        if self.pk and not kwargs.get("update_fields"):
+            if self.lines.exists() and not self.is_balanced:
+                raise ValidationError("El asiento contable debe tener Debe y Haber iguales.")
+        super().save(*args, **kwargs)
+
 
 class JournalLine(models.Model):
+    """One debit or credit line inside a journal entry."""
+
     entry = models.ForeignKey(JournalEntry, on_delete=models.CASCADE, related_name="lines")
     account = models.ForeignKey(Account, on_delete=models.PROTECT)
     memo = models.CharField(max_length=180, blank=True)
@@ -190,6 +206,8 @@ class JournalLine(models.Model):
 
 
 class RecurringPayment(TimeStampedModel):
+    """A scheduled expense; subscriptions are represented with is_subscription."""
+
     class ExecutionStatus(models.TextChoices):
         SUCCESS = "success", "Correcto"
         SKIPPED = "skipped", "Sin cambios"
@@ -207,6 +225,14 @@ class RecurringPayment(TimeStampedModel):
     account = models.ForeignKey(Account, on_delete=models.PROTECT)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
+    transaction_type = models.CharField(
+        max_length=24,
+        choices=[
+            (FinancialTransaction.TransactionType.INCOME, "Ingreso"),
+            (FinancialTransaction.TransactionType.EXPENSE, "Gasto"),
+        ],
+        default=FinancialTransaction.TransactionType.EXPENSE,
+    )
     frequency = models.CharField(max_length=16, choices=Frequency.choices, default=Frequency.MONTHLY)
     next_due_date = models.DateField()
     auto_create_transaction = models.BooleanField(default=False)
@@ -224,6 +250,8 @@ class RecurringPayment(TimeStampedModel):
 
 
 class Invoice(TimeStampedModel):
+    """An issued or received invoice with optional automatic accounting entry."""
+
     class InvoiceType(models.TextChoices):
         ISSUED = "issued", "Emitida"
         RECEIVED = "received", "Recibida"
@@ -259,6 +287,8 @@ class Invoice(TimeStampedModel):
 
 
 class CreditCard(TimeStampedModel):
+    """Credit card configuration and statement-derived finance calculations."""
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     account = models.OneToOneField(Account, on_delete=models.CASCADE, limit_choices_to={"account_type": Account.AccountType.CREDIT_CARD})
     credit_limit = models.DecimalField(max_digits=14, decimal_places=2)
@@ -372,6 +402,8 @@ class CreditCard(TimeStampedModel):
 
 
 class FinancialAdviceRule(TimeStampedModel):
+    """Configurable metadata for financial advice rules."""
+
     code = models.SlugField(unique=True)
     title = models.CharField(max_length=160)
     message = models.TextField()

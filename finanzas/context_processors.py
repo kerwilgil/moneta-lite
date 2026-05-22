@@ -1,11 +1,19 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 
 from .product import edition_payload, feature_enabled
+
+_SETUP_CACHE_KEY = "moneta_setup_allowed"
 
 
 def product_context(request):
     User = get_user_model()
+    setup_allowed = cache.get(_SETUP_CACHE_KEY)
+    if setup_allowed is None:
+        setup_allowed = not User.objects.exists()
+        # Short TTL while no users exist so setup completes quickly; long TTL once users exist.
+        cache.set(_SETUP_CACHE_KEY, setup_allowed, timeout=120 if setup_allowed else 86400)
     return {
         "product": {
             "name": getattr(settings, "APP_NAME", "Moneta"),
@@ -51,5 +59,5 @@ def product_context(request):
             "exports_basic": feature_enabled("exports_basic"),
             "exports_advanced": feature_enabled("exports_advanced"),
         },
-        "setup_allowed": not User.objects.exists(),
+        "setup_allowed": setup_allowed,
     }

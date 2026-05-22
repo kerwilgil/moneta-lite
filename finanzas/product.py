@@ -1,3 +1,5 @@
+"""Edition and feature-gate helpers for Moneta packages."""
+
 from functools import wraps
 
 from django.conf import settings
@@ -69,23 +71,28 @@ EDITION_FEATURES = {
 
 
 def normalize_edition(value):
+    """Normalize an environment edition name to a supported edition key."""
     edition = (value or "demo").strip().lower()
     return edition if edition in EDITION_FEATURES else "demo"
 
 
 def edition_features(value):
+    """Return the enabled feature set for an edition key."""
     return set(EDITION_FEATURES[normalize_edition(value)])
 
 
 def edition_label(value):
+    """Return a display label for an edition key."""
     return EDITION_LABELS.get(normalize_edition(value), "Demo")
 
 
 def feature_enabled(name):
+    """Check whether the current settings enable a feature."""
     return name in set(getattr(settings, "APP_FEATURES", set()))
 
 
 def edition_payload():
+    """Build template context metadata for the active edition."""
     edition = normalize_edition(getattr(settings, "APP_EDITION", "demo"))
     return {
         "key": edition,
@@ -98,6 +105,7 @@ def edition_payload():
 
 
 def require_feature(name):
+    """Decorator that redirects users away from disabled edition features."""
     def decorator(view_func):
         @wraps(view_func)
         def wrapped(request, *args, **kwargs):

@@ -36,8 +36,9 @@ class Command(BaseCommand):
             user.is_superuser = True
             changed = True
 
-        user.set_password(password)
-        changed = True
+        if not user.check_password(password):
+            user.set_password(password)
+            changed = True
 
         if changed:
             user.save()

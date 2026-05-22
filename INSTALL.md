@@ -140,9 +140,14 @@ Para publicar en Internet, cambia:
 
 ```env
 DJANGO_DEBUG=0
+DJANGO_SECRET_KEY=una-clave-unica-privada-de-50-caracteres-o-mas
 DJANGO_ALLOWED_HOSTS=tu-dominio.com,IP_DEL_SERVIDOR
 DJANGO_CSRF_TRUSTED_ORIGINS=https://tu-dominio.com
+DJANGO_SECURE_SSL_REDIRECT=1
+DJANGO_SECURE_HSTS_SECONDS=31536000
 ```
+
+Activa `DJANGO_SECURE_SSL_REDIRECT=1` y HSTS solo cuando el dominio ya responda por HTTPS. Si estas haciendo una prueba local por `http://127.0.0.1`, deja `DJANGO_DEBUG=1`.
 
 ## 7. Crear Base De Datos
 
@@ -226,6 +231,8 @@ Configuracion minima:
 - `DJANGO_SECRET_KEY` unico y privado.
 - `DJANGO_ALLOWED_HOSTS` con dominio/IP real.
 - HTTPS activo.
+- `DJANGO_SECURE_SSL_REDIRECT=1` si todo el trafico publico entra por HTTPS.
+- `DJANGO_SECURE_HSTS_SECONDS=31536000` cuando ya confirmaste HTTPS estable.
 - Base de datos respaldada.
 - Usuario admin con clave fuerte.
 

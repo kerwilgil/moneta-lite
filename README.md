@@ -4,7 +4,7 @@
   <p><strong>SaaS de finanzas personales, tarjetas, suscripciones y control contable.</strong></p>
   <p>
     <img alt="Django" src="https://img.shields.io/badge/Django-5.2%2B-0b5f3a?style=flat-square">
-    <img alt="Python" src="https://img.shields.io/badge/Python-3.13%2B-1f6feb?style=flat-square">
+    <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-1f6feb?style=flat-square">
     <img alt="Edition" src="https://img.shields.io/badge/Editions-Demo%20%7C%20Lite%20%7C%20Pro%20%7C%20Personal-c9a227?style=flat-square">
   </p>
 </div>
@@ -52,6 +52,31 @@ SUPPORT.md
 CHANGELOG.md
 ```
 
+Documentacion tecnica interna en español:
+
+```text
+docs/es/architecture.md
+docs/es/developer-guide.md
+docs/es/business-rules.md
+docs/es/release-process.md
+```
+
+Internal technical documentation in English:
+
+```text
+docs/en/architecture.md
+docs/en/developer-guide.md
+docs/en/business-rules.md
+docs/en/release-process.md
+```
+
+Documentacion adicional:
+
+```text
+docs/product-editions.md
+docs/roadmap.md
+```
+
 ```powershell
 py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -62,7 +87,7 @@ python manage.py seed_demo
 python manage.py runserver 127.0.0.1:8002
 ```
 
-Si usas Python 3.14, crea un entorno limpio con ese Python. `requirements.txt` permite Django 5.2+ y Django 6.x.
+Python 3.13 o 3.14 funcionan bien. En Python 3.10/3.11, `requirements.txt` instala Django 5.2 LTS.
 
 ## Configuracion
 
@@ -74,6 +99,8 @@ Variables principales:
 - `DJANGO_DEBUG`: `1` para desarrollo, `0` para produccion.
 - `DJANGO_ALLOWED_HOSTS`: dominios/IP permitidos.
 - `DJANGO_CSRF_TRUSTED_ORIGINS`: origenes HTTPS confiables si hay proxy/dominio.
+- `DJANGO_SECURE_SSL_REDIRECT`: `1` en produccion con HTTPS activo.
+- `DJANGO_SECURE_HSTS_SECONDS`: `31536000` en produccion con HTTPS estable.
 - `SAAS_EDITION`: `demo`, `lite`, `pro` o `personal`.
 - `SAAS_APP_NAME`: nombre visible de la app.
 
@@ -171,6 +198,8 @@ Configuracion minima de produccion:
 - `DJANGO_SECRET_KEY` fuerte y privado.
 - `DJANGO_ALLOWED_HOSTS` con dominio/IP real.
 - `DJANGO_CSRF_TRUSTED_ORIGINS` con `https://dominio.com`.
+- `DJANGO_SECURE_SSL_REDIRECT=1`.
+- `DJANGO_SECURE_HSTS_SECONDS=31536000` cuando HTTPS ya este confirmado.
 - HTTPS obligatorio para sesiones reales.
 - `/admin/` protegido con clave fuerte y, si es posible, VPN/IP allowlist.
 

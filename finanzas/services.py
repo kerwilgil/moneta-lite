@@ -1,3 +1,5 @@
+"""Query and aggregation services for dashboards, reports and advice."""
+
 from datetime import date
 from decimal import Decimal
 
@@ -6,16 +8,27 @@ from django.utils import timezone
 
 from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, RecurringPayment
 
+_FREQUENCY_MONTHLY_FACTOR = {
+    RecurringPayment.Frequency.WEEKLY: Decimal("4"),
+    RecurringPayment.Frequency.BIWEEKLY: Decimal("2"),
+    RecurringPayment.Frequency.MONTHLY: Decimal("1"),
+    RecurringPayment.Frequency.QUARTERLY: Decimal("1") / Decimal("3"),
+    RecurringPayment.Frequency.YEARLY: Decimal("1") / Decimal("12"),
+}
+
 
 def money_total(queryset, field="amount"):
+    """Aggregate a Decimal money total from a queryset, returning zero on empty."""
     return queryset.aggregate(total=Sum(field))["total"] or Decimal("0.00")
 
 
 def credit_card_debt_total(user):
+    """Return total credit card debt for one user."""
     return money_total(CreditCard.objects.filter(user=user), "current_debt")
 
 
 def mark_overdue_invoices(user, today=None):
+    """Mark pending invoices as overdue when due_date is before today."""
     today = today or timezone.localdate()
     return Invoice.objects.filter(
         user=user,
@@ -55,6 +68,7 @@ def _month_label(base_date, english=False):
 
 
 def monthly_cash_flow_series(user, months=7, english=False):
+    """Return monthly net cash-flow labels and values using one grouped query."""
     today = timezone.localdate()
     current_month = _month_start(today)
     month_starts = [_add_months(current_month, offset) for offset in range(-(months - 1), 1)]
@@ -102,6 +116,7 @@ def monthly_cash_flow_series(user, months=7, english=False):
 
 
 def category_budget_overview(user, today):
+    """Build per-category monthly budget usage rows for dashboard/report views."""
     month_expenses = FinancialTransaction.objects.filter(
         user=user,
         date__year=today.year,
@@ -151,6 +166,7 @@ def category_budget_overview(user, today):
 
 
 def dashboard_summary(user):
+    """Assemble the main dashboard totals and short lists for one user."""
     today = timezone.localdate()
     month_transactions = FinancialTransaction.objects.filter(
         user=user,
@@ -239,6 +255,7 @@ def dashboard_summary(user):
 
 
 def advice_for_user(user, summary=None):
+    """Generate lightweight financial advice from a dashboard summary."""
     summary = summary or dashboard_summary(user)
     advice = []
 
@@ -267,8 +284,11 @@ def advice_for_user(user, summary=None):
             )
 
     subscriptions = RecurringPayment.objects.filter(user=user, is_active=True, is_subscription=True)
-    subscription_total = money_total(subscriptions)
-    if subscription_total and summary["expenses"] and subscription_total / summary["expenses"] >= Decimal("0.15"):
+    subscription_monthly = sum(
+        (sub.amount * _FREQUENCY_MONTHLY_FACTOR.get(sub.frequency, Decimal("1"))).quantize(Decimal("0.01"))
+        for sub in subscriptions
+    )
+    if subscription_monthly and summary["expenses"] and subscription_monthly / summary["expenses"] >= Decimal("0.15"):
         advice.append(
             {
                 "title": "Suscripciones elevadas",

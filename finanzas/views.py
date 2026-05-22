@@ -1,3 +1,5 @@
+"""HTTP views and UI helpers for the Moneta finance app."""
+
 import csv
 from datetime import date, timedelta
 from decimal import Decimal
@@ -7,6 +9,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db import IntegrityError
 from django.db.models import ProtectedError
 from django.db.models import F, Q, Sum
@@ -253,6 +256,7 @@ def initial_setup(request):
 
 
 def sanitize_csv_cell(value):
+    """Escape spreadsheet formula prefixes before writing CSV exports."""
     if value is None:
         return ""
     text = str(value)
@@ -271,6 +275,7 @@ def parse_iso_date(value):
 
 
 def monthly_frequency_factor(frequency):
+    """Return the monthly projection multiplier for a recurring frequency."""
     factors = {
         RecurringPayment.Frequency.WEEKLY: Decimal("4.00"),
         RecurringPayment.Frequency.BIWEEKLY: Decimal("2.00"),
@@ -282,16 +287,15 @@ def monthly_frequency_factor(frequency):
 
 
 def recurring_overview(queryset):
+    """Summarize active recurring rows for list headers and dashboards."""
     today = timezone.localdate()
     limit = today + timedelta(days=30)
     monthly_projection = Decimal("0.00")
     due_next_30 = Decimal("0.00")
     active_count = 0
 
-    rows = queryset.values_list("amount", "frequency", "next_due_date", "is_active")
-    for amount, frequency, next_due_date, is_active in rows:
-        if not is_active:
-            continue
+    rows = queryset.filter(is_active=True).values_list("amount", "frequency", "next_due_date")
+    for amount, frequency, next_due_date in rows:
         amount = amount or Decimal("0.00")
         monthly_projection += amount * monthly_frequency_factor(frequency)
         active_count += 1
@@ -306,6 +310,7 @@ def recurring_overview(queryset):
 
 
 def paginate_queryset(request, queryset, per_page=LIST_PAGE_SIZE):
+    """Paginate list views using a shared page size."""
     paginator = Paginator(queryset, per_page)
     return paginator.get_page(request.GET.get("page"))
 
@@ -534,6 +539,12 @@ def save_user_form(
     after_save=None,
     initial_data=None,
 ):
+    """Shared create/edit flow for user-owned ModelForms.
+
+    The helper keeps view code consistent: instantiate with request.user,
+    assign ownership before save, run optional mutation/hooks and handle
+    uniqueness errors without exposing database exceptions to the user.
+    """
     if request.method == "POST":
         form = form_class(request.POST, user=request.user, instance=instance)
         if form.is_valid():
@@ -550,7 +561,7 @@ def save_user_form(
                 messages.success(request, "Registro guardado correctamente.")
                 return redirect(success_url)
             except IntegrityError:
-                form.add_error(None, "No se pudo guardar porque ya existe un registro con esos datos unicos.")
+                form.add_error(None, "No se pudo guardar. Verifica que no exista ya un registro con los mismos datos.")
     else:
         form = form_class(user=request.user, instance=instance, initial=initial_data)
 
@@ -857,8 +868,6 @@ def category_create(request):
 
 @login_required
 def category_edit(request, pk):
-    from .models import Category  # local import to keep top imports focused
-
     instance = get_object_or_404(Category, pk=pk, user=request.user)
     return save_user_form(
         request,
@@ -875,8 +884,6 @@ def category_edit(request, pk):
 @login_required
 @require_http_methods(["GET", "POST"])
 def category_delete(request, pk):
-    from .models import Category
-
     instance = get_object_or_404(Category, pk=pk, user=request.user)
     return confirm_delete(request, instance, "finanzas:settings", "Categoría")
 
@@ -1366,75 +1373,6 @@ def reports(request):
 
 
 @login_required
-def showcase_page(request):
-    english = is_english(request)
-    context = dashboard_summary(request.user)
-    context["advice"] = advice_for_user(request.user, context)
-    context["cash_flow_series"] = monthly_cash_flow_series(request.user, english=english)
-    context["showcase_features"] = [
-        {
-            "eyebrow": "Control",
-            "title": "Cash flow visible at a glance." if english else "Flujo de caja visible de inmediato.",
-            "body": "Income, expenses, cards and upcoming commitments in one operating view."
-            if english
-            else "Ingresos, gastos, tarjetas y compromisos próximos en una sola vista operativa.",
-        },
-        {
-            "eyebrow": "Order",
-            "title": "Accounting and personal finance aligned." if english else "Contabilidad y finanzas personales alineadas.",
-            "body": "Transactions, invoices and ledger entries stay connected without duplicating effort."
-            if english
-            else "Movimientos, facturas y asientos contables conectados sin duplicar trabajo.",
-        },
-        {
-            "eyebrow": "Focus",
-            "title": "A calmer way to review recurring spend." if english else "Una forma más clara de revisar gasto recurrente.",
-            "body": "Subscriptions, debt pressure and budget alerts in a cleaner visual layer."
-            if english
-            else "Suscripciones, presión de deuda y alertas de presupuesto en una capa visual más limpia.",
-        },
-    ]
-
-    for account in context.get("accounts", []):
-        decorate_account(account, english)
-    for card in context.get("credit_cards", []):
-        decorate_account(card.account, english)
-    decorate_budget_rows(context.get("category_budget", []), english)
-    for transaction in context.get("recent_transactions", []):
-        decorate_account(transaction.account, english)
-        decorate_category(transaction.category, english)
-        transaction.status_label_ui = localized_label(
-            TX_STATUS_LABELS,
-            transaction.status,
-            english,
-            transaction.get_status_display(),
-        )
-        transaction.transaction_type_label_ui = localized_label(
-            TX_TYPE_LABELS,
-            transaction.transaction_type,
-            english,
-            transaction.get_transaction_type_display(),
-        )
-
-    context["showcase_subscriptions"] = list(
-        RecurringPayment.objects.filter(user=request.user, is_subscription=True, is_active=True)
-        .select_related("account", "category")
-        .order_by("next_due_date", "name")[:4]
-    )
-    for subscription in context["showcase_subscriptions"]:
-        decorate_account(subscription.account, english)
-        decorate_category(subscription.category, english)
-        subscription.frequency_label_ui = localized_label(
-            FREQUENCY_LABELS,
-            subscription.frequency,
-            english,
-            subscription.get_frequency_display(),
-        )
-
-    return render(request, "finanzas/showcase.html", context)
-
-
-@login_required
 @require_feature("net_income")
 def net_income(request):
     context = dashboard_summary(request.user)
@@ -1443,8 +1381,6 @@ def net_income(request):
 
 @login_required
 def settings_page(request):
-    from .models import Category
-
     english = is_english(request)
     accounts = Account.objects.filter(user=request.user).order_by("account_type", "name")
     categories = Category.objects.filter(user=request.user).order_by("category_type", "name")
@@ -1465,6 +1401,54 @@ def settings_page(request):
     return render(request, "finanzas/settings.html", {"accounts": accounts, "categories": categories})
 
 
+def _build_transaction_queryset(user, request):
+    qs = FinancialTransaction.objects.filter(user=user).select_related(
+        "account", "destination_account", "related_credit_card__account", "category"
+    ).order_by("-date", "-id")
+    query = request.GET.get("q", "").strip()
+    tx_type = request.GET.get("transaction_type", "").strip()
+    status = request.GET.get("status", "").strip()
+    account_id = request.GET.get("account", "").strip()
+    category_id = request.GET.get("category", "").strip()
+    date_from = parse_iso_date(request.GET.get("date_from", "").strip())
+    date_to = parse_iso_date(request.GET.get("date_to", "").strip())
+    if query:
+        qs = qs.filter(Q(description__icontains=query) | Q(counterparty__icontains=query) | Q(notes__icontains=query))
+    if tx_type in dict(FinancialTransaction.TransactionType.choices):
+        qs = qs.filter(transaction_type=tx_type)
+    if status in dict(FinancialTransaction.Status.choices):
+        qs = qs.filter(status=status)
+    if account_id.isdigit():
+        qs = qs.filter(account_id=account_id)
+    if category_id.isdigit():
+        qs = qs.filter(category_id=category_id)
+    if date_from:
+        qs = qs.filter(date__gte=date_from)
+    if date_to:
+        qs = qs.filter(date__lte=date_to)
+    return qs
+
+
+def _build_invoice_queryset(user, request):
+    qs = Invoice.objects.filter(user=user).order_by("-issue_date", "-id")
+    query = request.GET.get("q", "").strip()
+    invoice_type = request.GET.get("invoice_type", "").strip()
+    status = request.GET.get("status", "").strip()
+    date_from = parse_iso_date(request.GET.get("date_from", "").strip())
+    date_to = parse_iso_date(request.GET.get("date_to", "").strip())
+    if query:
+        qs = qs.filter(Q(number__icontains=query) | Q(counterparty__icontains=query))
+    if invoice_type in dict(Invoice.InvoiceType.choices):
+        qs = qs.filter(invoice_type=invoice_type)
+    if status in dict(Invoice.Status.choices):
+        qs = qs.filter(status=status)
+    if date_from:
+        qs = qs.filter(issue_date__gte=date_from)
+    if date_to:
+        qs = qs.filter(issue_date__lte=date_to)
+    return qs
+
+
 @login_required
 @require_feature("exports_basic")
 def export_transactions_csv(request):
@@ -1473,12 +1457,7 @@ def export_transactions_csv(request):
     writer = csv.writer(response)
     writer.writerow(["Fecha", "Descripcion", "Tipo", "Cuenta", "Cuenta destino", "Tarjeta", "Categoria", "Monto", "Estado"])
 
-    transactions = FinancialTransaction.objects.filter(user=request.user).select_related(
-        "account",
-        "destination_account",
-        "related_credit_card__account",
-        "category",
-    ).order_by("-date", "-id")[:EXPORT_ROW_LIMIT]
+    transactions = _build_transaction_queryset(request.user, request)[:EXPORT_ROW_LIMIT]
     for tx in transactions:
         writer.writerow(
             [
@@ -1504,7 +1483,7 @@ def export_invoices_csv(request):
     writer = csv.writer(response)
     writer.writerow(["Numero", "Tipo", "Contacto", "Emision", "Vence", "Subtotal", "Impuesto", "Total", "Estado"])
 
-    invoices = Invoice.objects.filter(user=request.user).order_by("-issue_date", "-id")[:EXPORT_ROW_LIMIT]
+    invoices = _build_invoice_queryset(request.user, request)[:EXPORT_ROW_LIMIT]
     for invoice in invoices:
         writer.writerow(
             [
@@ -1576,3 +1555,27 @@ def export_subscriptions_csv(request):
             ]
         )
     return response
+
+
+def _client_ip(request):
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    return forwarded.split(",")[0].strip() if forwarded else request.META.get("REMOTE_ADDR", "unknown")
+
+
+@require_http_methods(["GET", "POST"])
+def login_view(request):
+    from django.contrib.auth.views import LoginView
+    ip = _client_ip(request)
+    if cache.get(f"moneta_login_lock_{ip}"):
+        from django.contrib.auth.forms import AuthenticationForm
+        form = AuthenticationForm()
+        return render(
+            request,
+            "registration/login.html",
+            {
+                "form": form,
+                "login_locked": True,
+                "error_message": "Demasiados intentos fallidos. Intenta de nuevo en 15 minutos.",
+            },
+        )
+    return LoginView.as_view()(request)

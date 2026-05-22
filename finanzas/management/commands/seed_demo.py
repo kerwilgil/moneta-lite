@@ -22,15 +22,11 @@ class Command(BaseCommand):
         User = get_user_model()
         user, created = User.objects.get_or_create(
             username="demo",
-            defaults={"email": "demo@local.test", "is_staff": True, "is_superuser": True},
+            defaults={"email": "demo@local.test", "is_staff": False, "is_superuser": False},
         )
         if created:
             user.set_password("demo12345")
             user.save(update_fields=["password"])
-        elif not user.is_staff or not user.is_superuser:
-            user.is_staff = True
-            user.is_superuser = True
-            user.save(update_fields=["is_staff", "is_superuser"])
 
         categories = {
             "Sueldo": Category.CategoryType.INCOME,

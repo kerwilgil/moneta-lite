@@ -1,3 +1,9 @@
+"""Accounting helpers for balances and automatic journal entries.
+
+This module is the source of truth for how confirmed transactions affect
+account balances and how Moneta creates Debe/Haber journal entries.
+"""
+
 from decimal import Decimal
 
 from django.db import transaction
@@ -9,10 +15,12 @@ MANUAL_BALANCE_TYPES = {Account.AccountType.INVESTMENT}
 
 
 def _as_money(value):
+    """Normalize nullable numeric values to two-decimal money Decimals."""
     return (value or Decimal("0.00")).quantize(Decimal("0.01"))
 
 
 def ensure_system_account(user, name, account_type):
+    """Return a per-user system account used by automatic journal entries."""
     account, _ = Account.objects.get_or_create(
         user=user,
         name=name,
@@ -28,6 +36,7 @@ def ensure_system_account(user, name, account_type):
 
 
 def sync_credit_card_account_balance(card):
+    """Mirror a card debt into its linked credit-card account balance."""
     if isinstance(card, Account):
         try:
             card = card.creditcard
@@ -52,6 +61,12 @@ def _journal_line(entry, account, debit=Decimal("0.00"), credit=Decimal("0.00"),
 
 @transaction.atomic
 def rebuild_account_balances(user, force_account_ids=None):
+    """Recalculate account balances from cleared transactions for one user.
+
+    Investments keep their manual balance unless they were touched by a
+    transaction or explicitly forced. Credit card model debt is synchronized
+    from the linked card account after balances are rebuilt.
+    """
     accounts = {account.id: account for account in Account.objects.filter(user=user)}
     force_account_ids = set(force_account_ids or [])
     txs = list(
@@ -115,6 +130,7 @@ def rebuild_account_balances(user, force_account_ids=None):
 
 
 def _get_or_new_entry(instance, prefix):
+    """Reuse an automatic journal entry, clearing old lines before rebuild."""
     if instance.journal_entry_id:
         entry = instance.journal_entry
         entry.lines.all().delete()
@@ -123,7 +139,12 @@ def _get_or_new_entry(instance, prefix):
 
 
 @transaction.atomic
-def sync_transaction_journal(transaction_obj):
+def sync_transaction_journal(transaction_obj, _system_accounts=None):
+    """Create, update, or remove the automatic journal entry for a transaction.
+
+    Pass _system_accounts=(income_result, expense_result, transfer_bridge) to skip
+    the three ensure_system_account queries when processing many transactions in bulk.
+    """
     if transaction_obj.status != FinancialTransaction.Status.CLEARED:
         if transaction_obj.journal_entry_id:
             transaction_obj.journal_entry.delete()
@@ -131,9 +152,12 @@ def sync_transaction_journal(transaction_obj):
             transaction_obj.save(update_fields=["journal_entry"])
         return
 
-    income_result = ensure_system_account(transaction_obj.user, "Resultado ingresos", Account.AccountType.CAPITAL)
-    expense_result = ensure_system_account(transaction_obj.user, "Resultado gastos", Account.AccountType.CAPITAL)
-    transfer_bridge = ensure_system_account(transaction_obj.user, "Cuenta puente transferencias", Account.AccountType.CAPITAL)
+    if _system_accounts is not None:
+        income_result, expense_result, transfer_bridge = _system_accounts
+    else:
+        income_result = ensure_system_account(transaction_obj.user, "Resultado ingresos", Account.AccountType.CAPITAL)
+        expense_result = ensure_system_account(transaction_obj.user, "Resultado gastos", Account.AccountType.CAPITAL)
+        transfer_bridge = ensure_system_account(transaction_obj.user, "Cuenta puente transferencias", Account.AccountType.CAPITAL)
 
     entry = _get_or_new_entry(transaction_obj, "tx_auto")
     entry.date = transaction_obj.date
@@ -168,12 +192,14 @@ def sync_transaction_journal(transaction_obj):
 
 @transaction.atomic
 def delete_transaction_journal(transaction_obj):
+    """Delete the automatic journal entry attached to a transaction."""
     if transaction_obj.journal_entry_id:
         transaction_obj.journal_entry.delete()
 
 
 @transaction.atomic
 def sync_invoice_journal(invoice_obj):
+    """Create, update, or remove the automatic journal entry for an invoice."""
     if invoice_obj.status in (Invoice.Status.DRAFT, Invoice.Status.VOID):
         if invoice_obj.journal_entry_id:
             invoice_obj.journal_entry.delete()
@@ -206,5 +232,6 @@ def sync_invoice_journal(invoice_obj):
 
 @transaction.atomic
 def delete_invoice_journal(invoice_obj):
+    """Delete the automatic journal entry attached to an invoice."""
     if invoice_obj.journal_entry_id:
         invoice_obj.journal_entry.delete()

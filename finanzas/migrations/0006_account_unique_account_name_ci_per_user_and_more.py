@@ -3,6 +3,46 @@
 import django.db.models.functions.text
 from django.conf import settings
 from django.db import migrations, models
+from django.db.models import Count
+from django.db.models.functions import Lower
+
+
+def check_case_insensitive_duplicates(apps, schema_editor):
+    Account = apps.get_model("finanzas", "Account")
+    Category = apps.get_model("finanzas", "Category")
+
+    duplicate_accounts = list(
+        Account.objects.annotate(name_ci=Lower("name"))
+        .values("user_id", "name_ci")
+        .annotate(total=Count("id"))
+        .filter(total__gt=1)
+        .order_by("user_id", "name_ci")[:10]
+    )
+    duplicate_categories = list(
+        Category.objects.annotate(name_ci=Lower("name"))
+        .values("user_id", "category_type", "name_ci")
+        .annotate(total=Count("id"))
+        .filter(total__gt=1)
+        .order_by("user_id", "category_type", "name_ci")[:10]
+    )
+
+    messages = []
+    if duplicate_accounts:
+        details = ", ".join(f"user={row['user_id']} name={row['name_ci']}" for row in duplicate_accounts)
+        messages.append(f"cuentas duplicadas por usuario: {details}")
+    if duplicate_categories:
+        details = ", ".join(
+            f"user={row['user_id']} type={row['category_type']} name={row['name_ci']}"
+            for row in duplicate_categories
+        )
+        messages.append(f"categorias duplicadas por usuario/tipo: {details}")
+
+    if messages:
+        raise RuntimeError(
+            "No se puede aplicar la restriccion case-insensitive. "
+            "Renombra o combina los registros duplicados antes de migrar: "
+            + "; ".join(messages)
+        )
 
 
 class Migration(migrations.Migration):
@@ -13,6 +53,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(check_case_insensitive_duplicates, migrations.RunPython.noop),
         migrations.AddConstraint(
             model_name='account',
             constraint=models.UniqueConstraint(models.F('user'), django.db.models.functions.text.Lower('name'), name='unique_account_name_ci_per_user'),

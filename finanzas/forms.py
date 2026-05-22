@@ -1,3 +1,5 @@
+"""Forms and input validation for user-owned finance records."""
+
 from decimal import Decimal
 
 from django import forms
@@ -9,6 +11,8 @@ from .models import Account, Category, CreditCard, FinancialTransaction, Invoice
 
 
 class UserScopedModelForm(forms.ModelForm):
+    """Base ModelForm that scopes selectable foreign keys to the active user."""
+
     user_scoped_fields = ()
 
     def __init__(self, *args, user=None, **kwargs):
@@ -197,16 +201,17 @@ class RecurringPaymentForm(UserScopedModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, user=user, **kwargs)
         self.fields["category"].queryset = self.fields["category"].queryset.filter(
-            category_type=Category.CategoryType.EXPENSE
+            category_type__in=[Category.CategoryType.EXPENSE, Category.CategoryType.INCOME]
         )
 
     class Meta:
         model = RecurringPayment
-        fields = ["name", "account", "category", "amount", "frequency", "next_due_date", "auto_create_transaction", "is_active"]
+        fields = ["name", "account", "category", "transaction_type", "amount", "frequency", "next_due_date", "auto_create_transaction", "is_active"]
         labels = {
             "name": "Nombre",
             "account": "Cuenta",
             "category": "Categoria",
+            "transaction_type": "Tipo de movimiento",
             "amount": "Monto",
             "frequency": "Frecuencia",
             "next_due_date": "Proximo vencimiento",
@@ -219,8 +224,13 @@ class RecurringPaymentForm(UserScopedModelForm):
 
     def clean_category(self):
         category = self.cleaned_data.get("category")
-        if category and category.category_type != Category.CategoryType.EXPENSE:
-            raise forms.ValidationError("Los pagos recurrentes y suscripciones deben usar categorias de gasto.")
+        transaction_type = self.cleaned_data.get("transaction_type") or self.data.get("transaction_type")
+        expected = {
+            "income": Category.CategoryType.INCOME,
+            "expense": Category.CategoryType.EXPENSE,
+        }.get(transaction_type, Category.CategoryType.EXPENSE)
+        if category and category.category_type != expected:
+            raise forms.ValidationError("La categoria no corresponde al tipo de movimiento seleccionado.")
         return category
 
     def clean_amount(self):

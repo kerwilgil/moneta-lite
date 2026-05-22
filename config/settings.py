@@ -1,3 +1,4 @@
+from decimal import Decimal
 from pathlib import Path
 import os
 
@@ -14,13 +15,33 @@ def env_list(name, default=""):
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
-DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
+def env_bool(name, default=False):
+    return os.getenv(name, "1" if default else "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_int(name, default):
+    raw_value = os.getenv(name)
+    if raw_value in (None, ""):
+        return default
+    try:
+        return int(raw_value)
+    except ValueError as exc:
+        raise ImproperlyConfigured(f"{name} debe ser un numero entero.") from exc
+
+
+DEBUG = env_bool("DJANGO_DEBUG", True)
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     if DEBUG:
         SECRET_KEY = "dev-only-change-me"
     else:
         raise ImproperlyConfigured("Define DJANGO_SECRET_KEY cuando DJANGO_DEBUG=0.")
+elif not DEBUG and (
+    SECRET_KEY == "dev-only-change-me"
+    or SECRET_KEY == "replace-this-with-a-unique-secret-key-of-at-least-50-random-characters"
+    or len(SECRET_KEY) < 50
+):
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY debe ser unica, privada y tener al menos 50 caracteres en produccion.")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 APP_EDITION = normalize_edition(os.getenv("SAAS_EDITION", "demo"))
@@ -42,7 +63,7 @@ APP_LOGIN_DESCRIPTION_EN = os.getenv(
     "SAAS_LOGIN_DESCRIPTION_EN",
     "Track finance, debt and capital from a single workspace.",
 )
-MONETA_FECI_ANNUAL_RATE_PERCENT = os.getenv("MONETA_FECI_ANNUAL_RATE_PERCENT", "1.00")
+MONETA_FECI_ANNUAL_RATE_PERCENT = Decimal(os.getenv("MONETA_FECI_ANNUAL_RATE_PERCENT", "1.00"))
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -125,15 +146,15 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
-if os.getenv("DJANGO_SECURE_PROXY_SSL_HEADER", "0") == "1":
+if env_bool("DJANGO_SECURE_PROXY_SSL_HEADER", False):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 if not DEBUG:
-    SECURE_SSL_REDIRECT = os.getenv("DJANGO_SECURE_SSL_REDIRECT", "1") == "1"
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
-    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_SECONDS = env_int("DJANGO_SECURE_HSTS_SECONDS", 31536000)
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
