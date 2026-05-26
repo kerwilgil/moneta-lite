@@ -25,15 +25,7 @@
     <title>{% block title %}{{ product.name }}{% endblock %}</title>
     <link rel="icon" type="image/png" href="{% static product.favicon %}">
     <link rel="apple-touch-icon" href="{% static product.favicon %}">
-    <script>
-        (() => {
-            const storedTheme = localStorage.getItem("moneta-theme") || "auto";
-            const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-            const resolvedTheme = storedTheme === "auto" ? (prefersDark ? "dark" : "light") : storedTheme;
-            document.documentElement.dataset.theme = resolvedTheme;
-            document.documentElement.dataset.themeMode = storedTheme;
-        })();
-    </script>
+    <script src="{% static 'js/theme-init.js' %}"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -155,34 +147,6 @@
 <script src="{% static 'js/image_fallbacks.js' %}"></script>
 <script src="{% static 'js/dashboard.js' %}"></script>
 <script src="{% static 'js/salary_calculator.js' %}"></script>
-<script>
-(() => {
-    const toggle = document.getElementById("mobileNavToggle");
-    const backdrop = document.getElementById("sidebarBackdrop");
-    if (!toggle) return;
-
-    const open = () => {
-        document.body.dataset.sidebar = "open";
-        toggle.setAttribute("aria-expanded", "true");
-    };
-    const close = () => {
-        document.body.removeAttribute("data-sidebar");
-        toggle.setAttribute("aria-expanded", "false");
-    };
-
-    toggle.addEventListener("click", () => {
-        document.body.dataset.sidebar === "open" ? close() : open();
-    });
-    backdrop?.addEventListener("click", close);
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && document.body.dataset.sidebar === "open") close();
-    });
-    document.querySelectorAll(".sidebar .nav-link").forEach((link) => {
-        link.addEventListener("click", () => {
-            if (window.matchMedia("(max-width: 1100px)").matches) close();
-        });
-    });
-})();
-</script>
+<script src="{% static 'js/nav.js' %}"></script>
 </body>
 </html>
