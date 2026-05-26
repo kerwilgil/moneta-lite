@@ -635,37 +635,13 @@ def dashboard(request):
 @login_required
 def transaction_list(request):
     english = is_english(request)
-    base_queryset = FinancialTransaction.objects.filter(user=request.user).select_related(
-        "account",
-        "category",
-        "destination_account",
-        "related_credit_card__account",
-    ).order_by("-date", "-id")
+    base_queryset = _build_transaction_queryset(request.user, request)
 
     query = request.GET.get("q", "").strip()
     tx_type = request.GET.get("transaction_type", "").strip()
     status = request.GET.get("status", "").strip()
     account_id = request.GET.get("account", "").strip()
     category_id = request.GET.get("category", "").strip()
-    date_from = parse_iso_date(request.GET.get("date_from", "").strip())
-    date_to = parse_iso_date(request.GET.get("date_to", "").strip())
-
-    if query:
-        base_queryset = base_queryset.filter(
-            Q(description__icontains=query) | Q(counterparty__icontains=query) | Q(notes__icontains=query)
-        )
-    if tx_type in dict(FinancialTransaction.TransactionType.choices):
-        base_queryset = base_queryset.filter(transaction_type=tx_type)
-    if status in dict(FinancialTransaction.Status.choices):
-        base_queryset = base_queryset.filter(status=status)
-    if account_id.isdigit():
-        base_queryset = base_queryset.filter(account_id=account_id)
-    if category_id.isdigit():
-        base_queryset = base_queryset.filter(category_id=category_id)
-    if date_from:
-        base_queryset = base_queryset.filter(date__gte=date_from)
-    if date_to:
-        base_queryset = base_queryset.filter(date__lte=date_to)
 
     summary = base_queryset.aggregate(
         income=Sum(
@@ -893,23 +869,11 @@ def category_delete(request, pk):
 def invoice_list(request):
     english = is_english(request)
     mark_overdue_invoices(request.user)
-    queryset = Invoice.objects.filter(user=request.user).select_related("journal_entry").order_by("-issue_date", "-id")
+    queryset = _build_invoice_queryset(request.user, request)
+
     query = request.GET.get("q", "").strip()
     invoice_type = request.GET.get("invoice_type", "").strip()
     status = request.GET.get("status", "").strip()
-    date_from = parse_iso_date(request.GET.get("date_from", "").strip())
-    date_to = parse_iso_date(request.GET.get("date_to", "").strip())
-
-    if query:
-        queryset = queryset.filter(Q(number__icontains=query) | Q(counterparty__icontains=query))
-    if invoice_type in dict(Invoice.InvoiceType.choices):
-        queryset = queryset.filter(invoice_type=invoice_type)
-    if status in dict(Invoice.Status.choices):
-        queryset = queryset.filter(status=status)
-    if date_from:
-        queryset = queryset.filter(issue_date__gte=date_from)
-    if date_to:
-        queryset = queryset.filter(issue_date__lte=date_to)
 
     totals = queryset.annotate(total_amount=F("subtotal") + F("tax")).aggregate(
         total=Sum("total_amount"),

@@ -44,6 +44,7 @@ class CategoryAdmin(admin.ModelAdmin):
 class FinancialTransactionAdmin(admin.ModelAdmin):
     list_display = ("date", "description", "transaction_type", "account", "category", "amount", "status")
     list_filter = ("transaction_type", "status", "date")
+    list_select_related = ("account", "category")
     search_fields = ("description", "counterparty")
     date_hierarchy = "date"
 
@@ -52,6 +53,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
 class RecurringPaymentAdmin(admin.ModelAdmin):
     list_display = ("name", "amount", "frequency", "next_due_date", "is_subscription", "is_active")
     list_filter = ("frequency", "is_subscription", "is_active")
+    list_select_related = ("account", "category")
     search_fields = ("name",)
 
 
@@ -65,6 +67,7 @@ class InvoiceAdmin(admin.ModelAdmin):
 @admin.register(CreditCard)
 class CreditCardAdmin(admin.ModelAdmin):
     list_display = ("account", "credit_limit", "current_debt", "annual_interest_rate", "utilization_percent", "minimum_payment")
+    list_select_related = ("account",)
 
 
 @admin.register(FinancialAdviceRule)
