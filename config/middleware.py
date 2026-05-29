@@ -3,9 +3,9 @@ from django.conf import settings
 _DEFAULT_CSP = (
     "default-src 'self'; "
     "script-src 'self' cdn.jsdelivr.net; "
-    "style-src 'self' cdn.jsdelivr.net fonts.googleapis.com; "
-    "font-src fonts.gstatic.com; "
-    "img-src 'self' data:; "
+    "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; "
+    "font-src 'self' fonts.gstatic.com; "
+    "img-src 'self' data: cdn.simpleicons.org; "
     "connect-src 'self'; "
     "frame-ancestors 'none'; "
     "base-uri 'self'; "
