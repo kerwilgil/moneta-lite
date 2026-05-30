@@ -34,10 +34,10 @@ Then open:
 http://IP_DEL_SERVIDOR:8000/
 ```
 
-## Should I Use admin/admin?
+## Should I Use A Simple Demo Password?
 
-No. Use a strong admin password. The `admin/admin` pattern is only useful for
-local demos and should never be used in a real environment.
+No. Use a unique admin username and a strong password. Simple demo credentials
+should never be used in a real environment.
 
 ## Can I Publish Moneta On The Internet?
 

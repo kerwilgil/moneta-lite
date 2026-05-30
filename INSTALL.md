@@ -33,13 +33,13 @@ Descarga o descomprime Moneta en una carpeta facil de encontrar.
 Ejemplo Windows:
 
 ```text
-C:\Moneta\moneta-pro
+C:\Moneta\moneta
 ```
 
 Ejemplo Mac/Linux/NAS:
 
 ```text
-/opt/moneta/moneta-pro
+/opt/moneta/moneta
 ```
 
 ## 3. Abrir La Terminal Correcta
@@ -58,7 +58,7 @@ Usa comandos marcados como `powershell`.
 2. Entra a la carpeta de Moneta:
 
 ```cmd
-cd C:\Moneta\moneta-pro
+cd C:\Moneta\moneta
 ```
 
 Usa comandos marcados como `cmd`.
@@ -69,7 +69,7 @@ Usa comandos marcados como `cmd`.
 2. Entra a la carpeta de Moneta:
 
 ```bash
-cd /opt/moneta/moneta-pro
+cd /opt/moneta/moneta
 ```
 
 Usa comandos marcados como `bash`.
@@ -133,7 +133,6 @@ Abre `.env` con un editor de texto y revisa:
 DJANGO_SECRET_KEY=coloca-una-clave-larga-y-privada
 DJANGO_DEBUG=1
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
-SAAS_EDITION=pro
 ```
 
 Para publicar en Internet, cambia:
@@ -167,7 +166,7 @@ El sistema pedira usuario, correo y contrasena.
 
 Recomendacion:
 
-- No uses `admin/admin`.
+- No uses credenciales simples o repetidas.
 - Usa una contrasena fuerte.
 - Guarda el usuario en un lugar seguro.
 
