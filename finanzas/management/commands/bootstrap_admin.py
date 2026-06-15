@@ -44,6 +44,11 @@ class Command(BaseCommand):
             user.save()
 
         if created:
+            from django.core.cache import cache
+
+            from finanzas.context_processors import _SETUP_CACHE_KEY
+
+            cache.delete(_SETUP_CACHE_KEY)
             self.stdout.write(self.style.SUCCESS(f"Administrador creado: {username}"))
         else:
             self.stdout.write(self.style.SUCCESS(f"Administrador actualizado: {username}"))

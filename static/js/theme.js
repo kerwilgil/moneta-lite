@@ -39,4 +39,9 @@
             applyTheme(mode);
         }
     });
+
+    // CSP-safe replacement for inline onchange="this.form.submit()".
+    document.querySelectorAll("select[data-autosubmit]").forEach((select) => {
+        select.addEventListener("change", () => select.form?.submit());
+    });
 })();

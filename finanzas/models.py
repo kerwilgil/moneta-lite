@@ -41,7 +41,6 @@ class Account(TimeStampedModel):
 
     class Meta:
         ordering = ["account_type", "name"]
-        unique_together = ["user", "name"]
         constraints = [
             models.UniqueConstraint(
                 "user",
@@ -132,6 +131,10 @@ class FinancialTransaction(TimeStampedModel):
 
     class Meta:
         ordering = ["-date", "-created_at"]
+        indexes = [
+            models.Index(fields=["user", "-date"]),
+            models.Index(fields=["user", "status"]),
+        ]
 
     def __str__(self):
         return f"{self.description} - {self.amount}"
@@ -244,6 +247,9 @@ class RecurringPayment(TimeStampedModel):
 
     class Meta:
         ordering = ["next_due_date", "name"]
+        indexes = [
+            models.Index(fields=["user", "is_subscription", "next_due_date"]),
+        ]
 
     def __str__(self):
         return self.name

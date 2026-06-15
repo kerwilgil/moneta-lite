@@ -27,7 +27,7 @@
             {% csrf_token %}
             <input name="next" type="hidden" value="{{ request.get_full_path }}">
             <label for="languageMode">{% if lang_code|slice:':2' == 'en' %}Language{% else %}Idioma{% endif %}</label>
-            <select id="languageMode" name="language" class="form-select" onchange="this.form.submit()">
+            <select id="languageMode" name="language" class="form-select" data-autosubmit>
                 <option value="es" {% if lang_code|slice:':2' == 'es' %}selected{% endif %}>ES &mdash; Espa&ntilde;ol</option>
                 <option value="en" {% if lang_code|slice:':2' == 'en' %}selected{% endif %}>EN &mdash; English</option>
             </select>

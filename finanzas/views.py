@@ -31,6 +31,7 @@ from .accounting import (
     sync_transaction_journal,
 )
 from .automation import execute_due_recurrings_for_user
+from .context_processors import _SETUP_CACHE_KEY
 from .forms import (
     AccountForm,
     CategoryForm,
@@ -213,7 +214,15 @@ def change_language(request):
         request.session["django_language"] = language
 
     response = redirect(next_url)
-    response.set_cookie(settings.LANGUAGE_COOKIE_NAME, language)
+    response.set_cookie(
+        settings.LANGUAGE_COOKIE_NAME,
+        language,
+        max_age=settings.LANGUAGE_COOKIE_AGE,
+        path=settings.LANGUAGE_COOKIE_PATH,
+        domain=settings.LANGUAGE_COOKIE_DOMAIN,
+        secure=not settings.DEBUG,
+        samesite="Lax",
+    )
 
     if language.startswith("en"):
         messages.success(request, "Language switched to English.")
@@ -237,6 +246,7 @@ def initial_setup(request):
                 email=form.cleaned_data.get("email", ""),
                 password=form.cleaned_data["password"],
             )
+            cache.delete(_SETUP_CACHE_KEY)
             login(request, user)
             messages.success(request, "Superadministrador creado correctamente.")
             return redirect("finanzas:dashboard")
