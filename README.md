@@ -26,7 +26,7 @@ Moneta Lite está pensada para evaluaciones, demostraciones y uso financiero bá
 
 Lite no habilita pagos recurrentes automatizados, libro contable, cálculo de utilidad neta ni exportaciones avanzadas. Estas restricciones se aplican en el servidor mediante controles de funciones.
 
-Para el conjunto completo de módulos consulta [Moneta Full](https://github.com/kerwilgil/saas-moneta). Para una instalación privada completa en PC o NAS consulta [Moneta Personal](https://github.com/kerwilgil/moneta-personal).
+Para acceder al conjunto completo de módulos, solicita **Moneta Full** mediante contacto comercial.
 
 ## Inicio rápido local
 
