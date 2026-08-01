@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="static/img/moneta_logo.png" alt="Moneta Lite" width="340">
+  <img src="static/img/moneta_logo.png" alt="Moneta Lite" width="180">
   <h1>Moneta Lite</h1>
   <p>Una edición ligera para organizar tus finanzas esenciales sin perder control ni claridad.</p>
 
