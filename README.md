@@ -48,6 +48,17 @@ python manage.py runserver
 
 Abre `http://127.0.0.1:8000/`. La edición del paquete ya está fijada como Lite; no necesitas cambiar `SAAS_EDITION`.
 
+### Inicio y parada en Windows
+
+Después de completar la instalación:
+
+```bat
+start.bat
+stop.bat
+```
+
+`start.bat` utiliza `127.0.0.1:8002` por defecto, guarda el PID y los registros dentro de `logs/`, y `stop.bat` valida que el PID pertenezca a esta instalación antes de detenerlo. Puedes definir `MONETA_HOST` o `MONETA_PORT` antes de iniciar para cambiar la dirección.
+
 ## Configuración segura
 
 Antes de desplegar:

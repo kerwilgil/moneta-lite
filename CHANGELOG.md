@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 - 2026-07-31
+## 0.2.0 - 2026-08-01
 
 - Updated Django to the security-fixed 6.0.7 baseline and made production-safe settings the default.
 - Replaced cache-based, IP-only login lockout with atomic account-and-network throttling.
@@ -12,6 +12,8 @@
 - Hardened release scripts, removed password CLI/persistence paths and added SHA-256 manifests.
 - Improved form errors, live messages, keyboard navigation, chart alternatives, contrast and mobile tables.
 - Expanded regression coverage from 15 to 25 tests.
+- Added safe Windows start/stop launchers with PID ownership validation and the default Lite port 8002.
+- Restored the transparent Moneta mark and replaced private repository links with a commercial contact for Full.
 
 ## 0.1.2 - 2026-05-14
 
