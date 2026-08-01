@@ -1,54 +1,59 @@
+import getpass
+import os
+import sys
+
 from django.contrib.auth import get_user_model
-from django.conf import settings
-from django.core.management.base import CommandError
-from django.core.management.base import BaseCommand
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
+from django.utils import timezone
+
+from finanzas.models import SetupState
 
 
 class Command(BaseCommand):
-    help = "Crea o actualiza un usuario administrador inicial."
+    help = "Crea o actualiza un administrador sin exponer su clave en la linea de comandos."
 
     def add_arguments(self, parser):
         parser.add_argument("--username", default="admin")
-        parser.add_argument("--password", default="admin")
         parser.add_argument("--email", default="admin@local.test")
+        parser.add_argument(
+            "--password-env",
+            default="MONETA_ADMIN_PASSWORD",
+            help="Variable de entorno que contiene la clave (por defecto MONETA_ADMIN_PASSWORD).",
+        )
 
     def handle(self, *args, **options):
         username = options["username"]
-        password = options["password"]
         email = options["email"]
-        if not settings.DEBUG and password == "admin":
-            raise CommandError("No uses la clave por defecto admin en produccion. Pasa --password con una clave fuerte.")
+        password_env = options["password_env"]
+        password = os.getenv(password_env, "")
+        if not password:
+            if not sys.stdin.isatty():
+                raise CommandError(f"Define {password_env}; las claves no se aceptan como argumento CLI.")
+            password = getpass.getpass("Clave del administrador: ")
+            if password != getpass.getpass("Confirmar clave: "):
+                raise CommandError("Las claves no coinciden.")
 
         User = get_user_model()
-        user, created = User.objects.get_or_create(
-            username=username,
-            defaults={"email": email, "is_staff": True, "is_superuser": True},
-        )
+        candidate = User(username=username, email=email)
+        try:
+            validate_password(password, user=candidate)
+        except ValidationError as exc:
+            raise CommandError(" ".join(exc.messages)) from exc
 
-        changed = False
-        if user.email != email:
+        with transaction.atomic():
+            user, created = User.objects.select_for_update().get_or_create(
+                username=username,
+                defaults={"email": email, "is_staff": True, "is_superuser": True},
+            )
             user.email = email
-            changed = True
-        if not user.is_staff:
             user.is_staff = True
-            changed = True
-        if not user.is_superuser:
             user.is_superuser = True
-            changed = True
-
-        if not user.check_password(password):
             user.set_password(password)
-            changed = True
-
-        if changed:
             user.save()
+            SetupState.objects.update_or_create(pk=1, defaults={"consumed_at": timezone.now()})
 
-        if created:
-            from django.core.cache import cache
-
-            from finanzas.context_processors import _SETUP_CACHE_KEY
-
-            cache.delete(_SETUP_CACHE_KEY)
-            self.stdout.write(self.style.SUCCESS(f"Administrador creado: {username}"))
-        else:
-            self.stdout.write(self.style.SUCCESS(f"Administrador actualizado: {username}"))
+        action = "creado" if created else "actualizado"
+        self.stdout.write(self.style.SUCCESS(f"Administrador {action}: {username}"))

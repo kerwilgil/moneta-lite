@@ -1,6 +1,7 @@
 """HTTP views and UI helpers for the Moneta finance app."""
 
 import csv
+import secrets
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -9,11 +10,10 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.core.cache import cache
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
-from django.db.models import F, Q, Sum
-from django.http import HttpResponse
+from django.db.models import Case, Count, DecimalField, F, Q, Sum, Value, When
+from django.http import Http404, HttpResponse
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import translation
@@ -31,7 +31,6 @@ from .accounting import (
     sync_transaction_journal,
 )
 from .automation import execute_due_recurrings_for_user
-from .context_processors import _SETUP_CACHE_KEY
 from .forms import (
     AccountForm,
     CategoryForm,
@@ -43,10 +42,10 @@ from .forms import (
     RecurringPaymentForm,
     TransactionForm,
 )
-from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine, RecurringPayment
+from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine, RecurringPayment, SetupState
 from .product import require_feature
-from .security import client_ip
-from .services import advice_for_user, dashboard_summary, mark_overdue_invoices, monthly_cash_flow_series
+from .security import is_login_locked
+from .services import advice_for_user, dashboard_summary, monthly_cash_flow_series
 
 
 LIST_PAGE_SIZE = 100
@@ -233,6 +232,9 @@ def change_language(request):
 
 @require_http_methods(["GET", "POST"])
 def initial_setup(request):
+    if not getattr(settings, "MONETA_WEB_SETUP_ENABLED", False):
+        raise Http404
+
     User = get_user_model()
     if User.objects.exists():
         messages.info(request, "La configuracion inicial ya fue completada.")
@@ -240,13 +242,24 @@ def initial_setup(request):
 
     if request.method == "POST":
         form = InitialSuperuserForm(request.POST)
-        if form.is_valid():
-            user = User.objects.create_superuser(
-                username=form.cleaned_data["username"],
-                email=form.cleaned_data.get("email", ""),
-                password=form.cleaned_data["password"],
-            )
-            cache.delete(_SETUP_CACHE_KEY)
+        form_is_valid = form.is_valid()
+        supplied_token = request.POST.get("setup_token", "")
+        expected_token = getattr(settings, "MONETA_SETUP_TOKEN", "")
+        if not secrets.compare_digest(supplied_token, expected_token):
+            form.add_error(None, "El token de configuracion no es valido.")
+        elif form_is_valid:
+            with transaction.atomic():
+                setup_state = SetupState.objects.select_for_update().get(pk=1)
+                if setup_state.consumed_at or User.objects.exists():
+                    messages.info(request, "La configuracion inicial ya fue completada.")
+                    return redirect("login")
+                user = User.objects.create_superuser(
+                    username=form.cleaned_data["username"],
+                    email=form.cleaned_data.get("email", ""),
+                    password=form.cleaned_data["password"],
+                )
+                setup_state.consumed_at = timezone.now()
+                setup_state.save(update_fields=["consumed_at"])
             login(request, user)
             messages.success(request, "Superadministrador creado correctamente.")
             return redirect("finanzas:dashboard")
@@ -285,38 +298,31 @@ def parse_iso_date(value):
         return None
 
 
-def monthly_frequency_factor(frequency):
-    """Return the monthly projection multiplier for a recurring frequency."""
-    factors = {
-        RecurringPayment.Frequency.WEEKLY: Decimal("4.00"),
-        RecurringPayment.Frequency.BIWEEKLY: Decimal("2.00"),
-        RecurringPayment.Frequency.MONTHLY: Decimal("1.00"),
-        RecurringPayment.Frequency.QUARTERLY: Decimal("1") / Decimal("3"),
-        RecurringPayment.Frequency.YEARLY: Decimal("1") / Decimal("12"),
-    }
-    return factors.get(frequency, Decimal("1.00"))
-
-
 def recurring_overview(queryset):
     """Summarize active recurring rows for list headers and dashboards."""
     today = timezone.localdate()
     limit = today + timedelta(days=30)
-    monthly_projection = Decimal("0.00")
-    due_next_30 = Decimal("0.00")
-    active_count = 0
-
-    rows = queryset.filter(is_active=True).values_list("amount", "frequency", "next_due_date")
-    for amount, frequency, next_due_date in rows:
-        amount = amount or Decimal("0.00")
-        monthly_projection += amount * monthly_frequency_factor(frequency)
-        active_count += 1
-        if next_due_date and today <= next_due_date <= limit:
-            due_next_30 += amount
+    factor = Case(
+        When(frequency=RecurringPayment.Frequency.WEEKLY, then=Value(Decimal("4.00"))),
+        When(frequency=RecurringPayment.Frequency.BIWEEKLY, then=Value(Decimal("2.00"))),
+        When(frequency=RecurringPayment.Frequency.QUARTERLY, then=Value(Decimal("0.333333"))),
+        When(frequency=RecurringPayment.Frequency.YEARLY, then=Value(Decimal("0.083333"))),
+        default=Value(Decimal("1.00")),
+        output_field=DecimalField(max_digits=8, decimal_places=6),
+    )
+    totals = queryset.filter(is_active=True).aggregate(
+        monthly_projection=Sum(
+            F("amount") * factor,
+            output_field=DecimalField(max_digits=18, decimal_places=6),
+        ),
+        due_next_30=Sum("amount", filter=Q(next_due_date__range=(today, limit))),
+        active_count=Count("id"),
+    )
 
     return {
-        "monthly_projection": monthly_projection.quantize(Decimal("0.01")),
-        "due_next_30": due_next_30.quantize(Decimal("0.01")),
-        "active_count": active_count,
+        "monthly_projection": (totals["monthly_projection"] or Decimal("0.00")).quantize(Decimal("0.01")),
+        "due_next_30": (totals["due_next_30"] or Decimal("0.00")).quantize(Decimal("0.01")),
+        "active_count": totals["active_count"],
     }
 
 
@@ -528,6 +534,18 @@ def subscription_preset_initial(preset_key, user=None):
     return initial
 
 
+def apply_subscription_policy(obj, preset_key):
+    preset = subscription_preset_map().get(preset_key, {})
+    obj.is_subscription = True
+    obj.subscription_catalog = (
+        RecurringPayment.SubscriptionCatalog.INSURANCE
+        if preset.get("catalog") == "insurance"
+        else RecurringPayment.SubscriptionCatalog.SERVICE
+    )
+    if is_lite_edition() and preset.get("name"):
+        obj.name = preset["name"]
+
+
 def category_helper_context():
     return {
         "helper_note": "Si el campo Categoria aparece vacio, crea primero una categoria de ingreso, gasto o transferencia.",
@@ -560,15 +578,17 @@ def save_user_form(
         form = form_class(request.POST, user=request.user, instance=instance)
         if form.is_valid():
             try:
-                obj = form.save(commit=False)
-                if instance_mutator:
-                    instance_mutator(obj)
-                if hasattr(obj, "user_id"):
-                    obj.user = request.user
-                obj.save()
-                form.save_m2m()
-                if after_save:
-                    after_save(obj)
+                with transaction.atomic():
+                    obj = form.save(commit=False)
+                    if instance_mutator:
+                        instance_mutator(obj)
+                    if hasattr(obj, "user_id"):
+                        obj.user = request.user
+                    obj.full_clean()
+                    obj.save()
+                    form.save_m2m()
+                    if after_save:
+                        after_save(obj)
                 messages.success(request, "Registro guardado correctamente.")
                 return redirect(success_url)
             except IntegrityError:
@@ -616,7 +636,6 @@ def confirm_delete(request, instance, success_url, label):
 
 @login_required
 def dashboard(request):
-    mark_overdue_invoices(request.user)
     context = dashboard_summary(request.user)
     context["advice"] = advice_for_user(request.user, context)
     english = is_english(request)
@@ -784,9 +803,10 @@ def transaction_delete(request, pk):
         if instance.related_credit_card_id and instance.related_credit_card:
             account_ids.add(instance.related_credit_card.account_id)
         try:
-            delete_transaction_journal(instance)
-            instance.delete()
-            rebuild_account_balances(request.user, force_account_ids=account_ids)
+            with transaction.atomic():
+                delete_transaction_journal(instance)
+                instance.delete()
+                rebuild_account_balances(request.user, force_account_ids=account_ids)
             messages.success(request, "Movimiento eliminado correctamente.")
         except ProtectedError:
             messages.error(request, "No se puede eliminar el movimiento porque tiene registros asociados.")
@@ -878,7 +898,6 @@ def category_delete(request, pk):
 @login_required
 def invoice_list(request):
     english = is_english(request)
-    mark_overdue_invoices(request.user)
     queryset = _build_invoice_queryset(request.user, request)
 
     query = request.GET.get("q", "").strip()
@@ -966,8 +985,9 @@ def invoice_delete(request, pk):
     instance = get_object_or_404(Invoice, pk=pk, user=request.user)
     if request.method == "POST":
         try:
-            delete_invoice_journal(instance)
-            instance.delete()
+            with transaction.atomic():
+                delete_invoice_journal(instance)
+                instance.delete()
             messages.success(request, "Factura eliminada correctamente.")
         except ProtectedError:
             messages.error(request, "No se puede eliminar la factura porque tiene registros asociados.")
@@ -1185,7 +1205,7 @@ def subscription_create(request):
         "Registra servicios, afiliaciones y cargos automaticos.",
         "Guardar suscripción",
         extra_context=category_helper_context(),
-        instance_mutator=lambda obj: setattr(obj, "is_subscription", True),
+        instance_mutator=lambda obj: apply_subscription_policy(obj, preset_key),
         initial_data=initial_data,
     )
 
@@ -1193,7 +1213,18 @@ def subscription_create(request):
 @login_required
 @require_feature("subscriptions")
 def subscription_edit(request, pk):
-    instance = get_object_or_404(RecurringPayment, pk=pk, user=request.user, is_subscription=True)
+    filters = {"pk": pk, "user": request.user, "is_subscription": True}
+    if is_lite_edition():
+        filters["subscription_catalog"] = RecurringPayment.SubscriptionCatalog.INSURANCE
+    instance = get_object_or_404(RecurringPayment, **filters)
+    policy_name = instance.name
+
+    def preserve_subscription_policy(obj):
+        obj.is_subscription = True
+        if is_lite_edition():
+            obj.name = policy_name
+            obj.subscription_catalog = RecurringPayment.SubscriptionCatalog.INSURANCE
+
     return save_user_form(
         request,
         RecurringPaymentForm,
@@ -1204,7 +1235,7 @@ def subscription_edit(request, pk):
         "Guardar cambios",
         instance=instance,
         extra_context=category_helper_context(),
-        instance_mutator=lambda obj: setattr(obj, "is_subscription", True),
+        instance_mutator=preserve_subscription_policy,
     )
 
 
@@ -1307,17 +1338,21 @@ def ledger_create(request):
             elif debit_total != credit_total:
                 messages.error(request, "El asiento no esta balanceado: Debe y Haber deben ser iguales.")
             else:
-                entry = form.save(commit=False)
-                entry.user = request.user
-                entry.save()
-                for line in lines:
-                    JournalLine.objects.create(
-                        entry=entry,
-                        account=line["account"],
-                        memo=line.get("memo", ""),
-                        debit=line.get("debit") or Decimal("0.00"),
-                        credit=line.get("credit") or Decimal("0.00"),
-                    )
+                with transaction.atomic():
+                    entry = form.save(commit=False)
+                    entry.user = request.user
+                    entry.full_clean()
+                    entry.save()
+                    for line in lines:
+                        journal_line = JournalLine(
+                            entry=entry,
+                            account=line["account"],
+                            memo=line.get("memo", ""),
+                            debit=line.get("debit") or Decimal("0.00"),
+                            credit=line.get("credit") or Decimal("0.00"),
+                        )
+                        journal_line.full_clean()
+                        journal_line.save()
                 messages.success(request, "Asiento contable guardado correctamente.")
                 return redirect("finanzas:ledger")
     else:
@@ -1535,11 +1570,11 @@ def export_subscriptions_csv(request):
 @require_http_methods(["GET", "POST"])
 def login_view(request):
     from django.contrib.auth.views import LoginView
-    ip = client_ip(request)
-    if cache.get(f"moneta_login_lock_{ip}"):
+    identity = request.POST.get("username", "") if request.method == "POST" else ""
+    if request.method == "POST" and is_login_locked(request, identity):
         from django.contrib.auth.forms import AuthenticationForm
         form = AuthenticationForm()
-        return render(
+        response = render(
             request,
             "registration/login.html",
             {
@@ -1547,5 +1582,8 @@ def login_view(request):
                 "login_locked": True,
                 "error_message": "Demasiados intentos fallidos. Intenta de nuevo en 15 minutos.",
             },
+            status=429,
         )
+        response["Retry-After"] = str(getattr(settings, "MONETA_LOGIN_LOCKOUT_SECONDS", 900))
+        return response
     return LoginView.as_view()(request)

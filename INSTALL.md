@@ -20,10 +20,11 @@ Si solo quieres probar, usa tu PC y ejecuta Moneta en:
 http://127.0.0.1:8000/
 ```
 
-Si quieres acceder desde otra PC de tu red, ejecuta Moneta en:
+Si quieres acceder desde otra PC, publica Moneta mediante un proxy inverso con
+HTTPS o una VPN privada. La direccion debe usar el dominio protegido, por ejemplo:
 
 ```text
-http://IP_DEL_SERVIDOR:8000/
+https://moneta.tu-dominio.example/
 ```
 
 ## 2. Preparar La Carpeta
@@ -131,7 +132,7 @@ Abre `.env` con un editor de texto y revisa:
 
 ```env
 DJANGO_SECRET_KEY=coloca-una-clave-larga-y-privada
-DJANGO_DEBUG=1
+DJANGO_DEBUG=1  # Solo para desarrollo local en 127.0.0.1
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 ```
 
@@ -184,17 +185,10 @@ Abre:
 http://127.0.0.1:8000/
 ```
 
-Para acceder desde otra PC de tu red:
-
-```bash
-python manage.py runserver 0.0.0.0:8000
-```
-
-Abre desde otra PC:
-
-```text
-http://IP_DEL_SERVIDOR:8000/
-```
+Para acceder desde otra PC, no expongas `runserver`. Usa un servidor de
+aplicacion detras de un proxy inverso con certificado HTTPS, o una VPN privada.
+Mantén `DJANGO_DEBUG=0`, configura el dominio permitido y limita el acceso al
+panel administrativo.
 
 ## 10. Instalacion En NAS O QNAP
 

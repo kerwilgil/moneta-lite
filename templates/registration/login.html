@@ -1,4 +1,4 @@
-{% load static %}
+{% load static finanzas_extras %}
 <!doctype html>
 <html lang="{{ request.LANGUAGE_CODE|default:'es' }}">
 <head>
@@ -24,13 +24,13 @@
         {% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Too many failed attempts. Try again in 15 minutes.{% else %}{{ error_message }}{% endif %}
     </div>
     {% endif %}
-    <form method="post">
+    <form method="post" novalidate>
         {% csrf_token %}
-        {{ form.non_field_errors }}
+        {% if form.non_field_errors %}<div role="alert">{{ form.non_field_errors }}</div>{% endif %}
         <label class="form-label" for="{{ form.username.id_for_label }}">{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Username{% else %}Usuario{% endif %}</label>
-        {{ form.username }}
+        {% accessible_widget form.username %}
         <label class="form-label mt-3" for="{{ form.password.id_for_label }}">{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Password{% else %}Clave{% endif %}</label>
-        {{ form.password }}
+        {% accessible_widget form.password %}
         <button class="btn btn-success w-100 mt-4" type="submit" {% if login_locked %}disabled{% endif %}>{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Enter{% else %}Entrar{% endif %}</button>
         {% if setup_allowed %}
         <a class="btn btn-light w-100 mt-2" href="{% url 'finanzas:initial_setup' %}">{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Create master admin{% else %}Crear usuario master{% endif %}</a>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static finanzas_extras %}
 {% load i18n %}
 {% block title %}{{ title }}{% endblock %}
 {% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Ledger{% else %}Libro contable{% endif %}{% endblock %}
@@ -21,14 +21,14 @@
                 <div class="form-field {% if field.field.widget.input_type == 'checkbox' %}form-field-check{% endif %}">
                     {% if field.field.widget.input_type == 'checkbox' %}
                         <label class="form-check-label">
-                            {{ field }}
+                            {% accessible_widget field %}
                             <span>{{ field.label }}</span>
                         </label>
                     {% else %}
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
+                        {% accessible_widget field %}
                     {% endif %}
-                    {% for error in field.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+                    {% if field.errors %}<div id="{{ field.auto_id }}-error" class="field-error" role="alert">{% for error in field.errors %}<strong>{{ error }}</strong>{% endfor %}</div>{% endif %}
                 </div>
             {% endfor %}
         </div>
@@ -48,8 +48,8 @@
                     {% for field in line_form %}
                         <div class="form-field">
                             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {% for error in field.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+                            {% accessible_widget field %}
+                            {% if field.errors %}<div id="{{ field.auto_id }}-error" class="field-error" role="alert">{% for error in field.errors %}<strong>{{ error }}</strong>{% endfor %}</div>{% endif %}
                         </div>
                     {% endfor %}
                     <div class="line-actions">

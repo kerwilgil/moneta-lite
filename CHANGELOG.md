@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 - 2026-07-31
+
+- Updated Django to the security-fixed 6.0.7 baseline and made production-safe settings the default.
+- Replaced cache-based, IP-only login lockout with atomic account-and-network throttling.
+- Disabled browser bootstrap by default; optional setup now requires a one-time secret and database lock.
+- Added trusted-proxy CIDR validation, bounded recurring batches and database idempotency constraints.
+- Made transaction, invoice and journal synchronization atomic and added tenant/domain constraints.
+- Removed write side effects from GET requests and added `mark_overdue_invoices` for scheduled execution.
+- Enforced the Lite insurance subscription policy server-side.
+- Hardened release scripts, removed password CLI/persistence paths and added SHA-256 manifests.
+- Improved form errors, live messages, keyboard navigation, chart alternatives, contrast and mobile tables.
+- Expanded regression coverage from 15 to 25 tests.
+
 ## 0.1.2 - 2026-05-14
 
 - Optimized dashboard cash-flow series from repeated monthly queries to one grouped query.

@@ -1,17 +1,23 @@
 from datetime import date
 from decimal import Decimal
 import unittest
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.db import IntegrityError, transaction
 from django.test import Client, override_settings
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
 from .accounting import rebuild_account_balances, sync_credit_card_account_balance
+from .automation import execute_due_recurrings_for_user
 from .forms import CreditCardForm, InitialSuperuserForm, InvoiceForm, RecurringPaymentForm, TransactionForm
-from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, RecurringPayment
+from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, LoginThrottle, RecurringPayment
 from .product import edition_features
+from .security import client_ip
 from .services import mark_overdue_invoices
 from .views import recurring_overview
 
@@ -255,6 +261,63 @@ class FinanceLogicTests(TestCase):
         for field_name in ("credit_limit", "current_debt", "annual_interest_rate", "statement_day", "payment_due_day"):
             self.assertIn(field_name, form.errors)
 
+    def test_model_validation_rejects_cross_tenant_relations(self):
+        other_user = get_user_model().objects.create_user(username="other", password="secret")
+        other_account = Account.objects.create(
+            user=other_user,
+            name="Cuenta ajena",
+            account_type=Account.AccountType.CHECKING,
+        )
+        tx = FinancialTransaction(
+            user=self.user,
+            account=other_account,
+            transaction_type=FinancialTransaction.TransactionType.EXPENSE,
+            description="Cruce invalido",
+            amount=Decimal("1.00"),
+            date=date(2026, 4, 1),
+        )
+        with self.assertRaises(ValidationError):
+            tx.full_clean()
+
+    def test_recurring_occurrence_is_unique_at_database_level(self):
+        recurring = RecurringPayment.objects.create(
+            user=self.user,
+            name="Seguro mensual",
+            account=self.checking,
+            category=self.expense_category,
+            amount=Decimal("10.00"),
+            next_due_date=date(2026, 4, 1),
+        )
+        values = {
+            "user": self.user,
+            "account": self.checking,
+            "source_recurring": recurring,
+            "category": self.expense_category,
+            "transaction_type": FinancialTransaction.TransactionType.EXPENSE,
+            "description": "Ocurrencia",
+            "amount": Decimal("10.00"),
+            "date": date(2026, 4, 1),
+        }
+        FinancialTransaction.objects.create(**values)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            FinancialTransaction.objects.create(**values)
+
+    @override_settings(MONETA_RECURRING_BATCH_SIZE=2, MONETA_RECURRING_MAX_CYCLES=1)
+    def test_recurring_execution_is_bounded(self):
+        for index in range(3):
+            RecurringPayment.objects.create(
+                user=self.user,
+                name=f"Recurrente {index}",
+                account=self.checking,
+                category=self.expense_category,
+                amount=Decimal("10.00"),
+                next_due_date=date(2026, 4, 1),
+                auto_create_transaction=True,
+            )
+        stats = execute_due_recurrings_for_user(self.user, run_date=date(2026, 4, 1))
+        self.assertEqual(stats["processed"], 2)
+        self.assertEqual(stats["created_transactions"], 2)
+
 
 @override_settings(APP_EDITION="pro", APP_FEATURES=edition_features("pro"), ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"])
 @unittest.skipIf("recurring" not in edition_features("pro"), "Pro feature set is not available in this package.")
@@ -452,6 +515,49 @@ class FinanceViewSmokeTests(TestCase):
                 self.assertEqual(response.status_code, 200)
         self.assertIn("text/csv", response["Content-Type"])
 
+    def test_transaction_and_journal_are_rolled_back_together(self):
+        payload = {
+            "transaction_type": FinancialTransaction.TransactionType.EXPENSE,
+            "description": "Debe revertirse",
+            "account": self.checking.id,
+            "category": self.expense_category.id,
+            "amount": "20.00",
+            "date": "2026-05-05",
+            "status": FinancialTransaction.Status.CLEARED,
+        }
+        with patch("finanzas.views.sync_transaction_journal", side_effect=RuntimeError("journal failure")):
+            with self.assertRaises(RuntimeError):
+                self.client.post(reverse("finanzas:transaction_create"), payload)
+        self.assertFalse(FinancialTransaction.objects.filter(description="Debe revertirse").exists())
+
+    def test_get_requests_do_not_mark_invoices_overdue(self):
+        invoice = Invoice.objects.create(
+            user=self.user,
+            invoice_type=Invoice.InvoiceType.ISSUED,
+            number="GET-1",
+            counterparty="Cliente",
+            issue_date=date(2025, 1, 1),
+            due_date=date(2025, 1, 2),
+            subtotal=Decimal("10.00"),
+            status=Invoice.Status.PENDING,
+        )
+        self.client.get(reverse("finanzas:invoice_list"))
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, Invoice.Status.PENDING)
+        call_command("mark_overdue_invoices", verbosity=0)
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, Invoice.Status.OVERDUE)
+
+    def test_accessibility_hooks_are_rendered(self):
+        response = self.client.get(reverse("finanzas:dashboard"))
+        self.assertContains(response, 'href="#main-content"')
+        self.assertContains(response, 'id="main-content"')
+        self.assertContains(response, 'id="cashFlowChart" role="img"')
+
+        response = self.client.post(reverse("finanzas:transaction_create"), {})
+        self.assertContains(response, 'aria-invalid="true"')
+        self.assertContains(response, 'role="alert"')
+
 
 @override_settings(ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"], MONETA_TRUST_X_FORWARDED_FOR=False)
 class LoginLockoutTests(TestCase):
@@ -463,7 +569,7 @@ class LoginLockoutTests(TestCase):
     def tearDown(self):
         cache.clear()
 
-    def test_login_lockout_blocks_ip_and_ignores_untrusted_forwarded_for(self):
+    def test_login_lockout_is_scoped_to_account_and_network(self):
         login_url = reverse("login")
         for _ in range(10):
             response = self.client.post(login_url, {"username": self.user.username, "password": "wrong"})
@@ -471,11 +577,28 @@ class LoginLockoutTests(TestCase):
 
         response = self.client.get(login_url, HTTP_X_FORWARDED_FOR="203.0.113.10")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Demasiados intentos fallidos")
+        self.assertNotContains(response, "Demasiados intentos fallidos")
 
         response = self.client.post(login_url, {"username": self.user.username, "password": "correct-password"})
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Demasiados intentos fallidos")
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.headers["Retry-After"], "900")
+        self.assertContains(response, "Demasiados intentos fallidos", status_code=429)
+
+        second = get_user_model().objects.create_user(username="second", password="another-password")
+        response = self.client.post(login_url, {"username": second.username, "password": "another-password"})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(LoginThrottle.objects.count(), 1)
+
+    @override_settings(
+        MONETA_TRUST_X_FORWARDED_FOR=True,
+        MONETA_TRUSTED_PROXY_CIDRS=["10.0.0.10/32"],
+    )
+    def test_forwarded_for_is_used_only_from_trusted_proxy(self):
+        factory = RequestFactory()
+        untrusted = factory.get("/", REMOTE_ADDR="192.0.2.20", HTTP_X_FORWARDED_FOR="203.0.113.7")
+        trusted = factory.get("/", REMOTE_ADDR="10.0.0.10", HTTP_X_FORWARDED_FOR="203.0.113.7")
+        self.assertEqual(client_ip(untrusted), "192.0.2.20")
+        self.assertEqual(client_ip(trusted), "203.0.113.7")
 
 
 @override_settings(APP_EDITION="lite", APP_FEATURES=edition_features("lite"), ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"])
@@ -544,3 +667,67 @@ class LiteEditionGateTests(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("category", form.errors)
+
+    def test_lite_cannot_forge_or_rename_a_service_subscription(self):
+        expense = Category.objects.create(
+            user=self.user,
+            name="Seguros Lite",
+            category_type=Category.CategoryType.EXPENSE,
+        )
+        payload = {
+            "name": "Servicio arbitrario",
+            "account": self.checking.id,
+            "category": expense.id,
+            "transaction_type": "expense",
+            "amount": "25.00",
+            "frequency": RecurringPayment.Frequency.MONTHLY,
+            "next_due_date": "2026-04-01",
+            "is_active": "on",
+        }
+        response = self.client.post(reverse("finanzas:subscription_create") + "?preset=segurovida", payload)
+        self.assertEqual(response.status_code, 302)
+        subscription = RecurringPayment.objects.get(user=self.user, is_subscription=True)
+        self.assertEqual(subscription.name, "Seguro de vida privado")
+        self.assertEqual(subscription.subscription_catalog, RecurringPayment.SubscriptionCatalog.INSURANCE)
+
+        payload["name"] = "Netflix"
+        response = self.client.post(reverse("finanzas:subscription_edit", args=[subscription.pk]), payload)
+        self.assertEqual(response.status_code, 302)
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.name, "Seguro de vida privado")
+
+
+@override_settings(
+    ALLOWED_HOSTS=["testserver"],
+    MONETA_WEB_SETUP_ENABLED=True,
+    MONETA_SETUP_TOKEN="a-secure-one-time-setup-token-123456",
+)
+class InitialSetupSecurityTests(TestCase):
+    def test_setup_requires_token_and_can_only_be_claimed_once(self):
+        url = reverse("finanzas:initial_setup")
+        payload = {
+            "username": "owner",
+            "email": "owner@example.com",
+            "password": "Correct-Horse-Battery-Staple-2026!",
+            "password_confirm": "Correct-Horse-Battery-Staple-2026!",
+        }
+        response = self.client.post(url, {**payload, "setup_token": "wrong"})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(get_user_model().objects.exists())
+
+        response = self.client.post(
+            url,
+            {**payload, "setup_token": "a-secure-one-time-setup-token-123456"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(get_user_model().objects.filter(is_superuser=True).count(), 1)
+
+        self.client.logout()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"], MONETA_WEB_SETUP_ENABLED=False)
+class InitialSetupDisabledTests(TestCase):
+    def test_setup_is_not_public_by_default(self):
+        self.assertEqual(self.client.get(reverse("finanzas:initial_setup")).status_code, 404)

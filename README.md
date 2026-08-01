@@ -4,7 +4,7 @@
   <p><strong>Finanzas personales, tarjetas, suscripciones y reportes en un panel local.</strong></p>
   <p>
     <img alt="Django" src="https://img.shields.io/badge/Django-5.2%2B-0b5f3a?style=flat-square">
-    <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-1f6feb?style=flat-square">
+    <img alt="Python" src="https://img.shields.io/badge/Python-3.12%2B-1f6feb?style=flat-square">
     <img alt="License" src="https://img.shields.io/badge/License-MIT-c9a227?style=flat-square">
   </p>
 </div>
@@ -59,7 +59,7 @@ python manage.py seed_demo
 python manage.py runserver 127.0.0.1:8000
 ```
 
-Python 3.13 o 3.14 funcionan bien. En Python 3.10/3.11, `requirements.txt` instala Django 5.2 LTS.
+Python 3.12, 3.13 o 3.14 funcionan con la linea Django 6 fijada en `requirements.txt`.
 
 ## Configuracion
 

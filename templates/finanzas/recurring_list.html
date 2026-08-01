@@ -37,7 +37,7 @@
 
 <section class="panel compact-panel">
     <form method="get" class="filters-grid filters-grid-short">
-        <select class="form-select" name="active">
+        <select class="form-select" name="active" aria-label="{% if lang_code|slice:':2' == 'en' %}Activity status{% else %}Estado de actividad{% endif %}">
             <option value="all" {% if filters.active == "all" %}selected{% endif %}>{% if lang_code|slice:':2' == 'en' %}All{% else %}Todos{% endif %}</option>
             <option value="active" {% if filters.active == "active" %}selected{% endif %}>{% if lang_code|slice:':2' == 'en' %}Only active{% else %}Solo activos{% endif %}</option>
             <option value="inactive" {% if filters.active == "inactive" %}selected{% endif %}>{% if lang_code|slice:':2' == 'en' %}Only inactive{% else %}Solo inactivos{% endif %}</option>

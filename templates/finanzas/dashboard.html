@@ -93,7 +93,9 @@
             </label>
         </div>
         <div class="chart-frame">
-            <canvas id="cashFlowChart"></canvas>
+            <canvas id="cashFlowChart" role="img" aria-label="{% if lang_code|slice:':2' == 'en' %}Monthly cash-flow bar chart{% else %}Grafico de barras del flujo de caja mensual{% endif %}">
+                {% if lang_code|slice:':2' == 'en' %}Monthly cash-flow values are also available in the page data.{% else %}Los valores mensuales del flujo de caja tambien estan disponibles en los datos de la pagina.{% endif %}
+            </canvas>
         </div>
     </article>
 </section>

@@ -8,12 +8,13 @@
     --text: #09131d;
     --muted: #4f6070;
     --line: rgba(9, 19, 29, 0.08);
-    --green: #05b169;
-    --green-dark: #058b53;
-    --green-soft: rgba(5, 177, 105, 0.08);
+    --green: #067647;
+    --green-dark: #055d38;
+    --green-soft: rgba(6, 118, 71, 0.1);
     --blue: #1e5eff;
-    --warning: #d58d12;
+    --warning: #8a5100;
     --warning-soft: rgba(245, 158, 11, 0.1);
+    --danger: #b42318;
     --shadow: 0 20px 40px rgba(5, 15, 25, 0.08);
     --radius: 14px;
     --font-sans: "Inter", "Segoe UI Variable Text", "Aptos", "Segoe UI", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
@@ -36,11 +37,40 @@ html[data-theme="dark"] {
     --blue: #6a94ff;
     --warning: #efb23d;
     --warning-soft: rgba(245, 165, 36, 0.13);
+    --danger: #ff8a80;
     --shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
 }
 
 * {
     box-sizing: border-box;
+}
+
+.visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.skip-link {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 1100;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: var(--text);
+    color: var(--surface-strong);
+    transform: translateY(-150%);
+}
+
+.skip-link:focus {
+    transform: translateY(0);
 }
 
 body {
@@ -651,7 +681,7 @@ html[data-theme="dark"] .upgrade-box {
 }
 
 .app-message.error .app-message-label {
-    color: #f04438;
+    color: var(--danger);
 }
 
 .app-message.success .app-message-label {
@@ -776,7 +806,7 @@ html[data-theme="dark"] .crumb-icon-dark {
 }
 
 .budget-negative {
-    color: #f04438;
+    color: var(--danger);
     font-weight: 600;
 }
 
@@ -816,7 +846,7 @@ html[data-theme="dark"] .crumb-icon-dark {
 
 .budget-usage .progress-bar.bg-danger,
 .budget-usage > .progress-bar.bg-danger {
-    background-color: #f04438;
+    background-color: var(--danger);
 }
 
 .budget-alert {
@@ -1786,7 +1816,7 @@ html[data-theme="dark"] .net-income-highlights .mini-metric-card {
 }
 
 .field-error {
-    color: #f04438;
+    color: var(--danger);
     font-size: 12px;
     font-weight: 600;
 }
@@ -1986,7 +2016,7 @@ html[data-theme="dark"] .net-income-highlights .mini-metric-card {
 }
 
 .journal-totals .invalid {
-    color: #f04438;
+    color: var(--danger);
 }
 
 @media (max-width: 1100px) {
@@ -2101,7 +2131,9 @@ html[data-theme="dark"] .net-income-highlights .mini-metric-card {
     }
 
     .table-responsive {
-        overflow: visible;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .upcoming-grid {

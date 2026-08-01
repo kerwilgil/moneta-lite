@@ -1,5 +1,6 @@
 from decimal import Decimal
 from pathlib import Path
+import ipaddress
 import os
 
 from dotenv import load_dotenv
@@ -29,7 +30,7 @@ def env_int(name, default):
         raise ImproperlyConfigured(f"{name} debe ser un numero entero.") from exc
 
 
-DEBUG = env_bool("DJANGO_DEBUG", True)
+DEBUG = env_bool("DJANGO_DEBUG", False)
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     if DEBUG:
@@ -65,6 +66,34 @@ APP_LOGIN_DESCRIPTION_EN = os.getenv(
 )
 MONETA_FECI_ANNUAL_RATE_PERCENT = Decimal(os.getenv("MONETA_FECI_ANNUAL_RATE_PERCENT", "1.00"))
 MONETA_TRUST_X_FORWARDED_FOR = env_bool("MONETA_TRUST_X_FORWARDED_FOR", False)
+MONETA_TRUSTED_PROXY_CIDRS = env_list("MONETA_TRUSTED_PROXY_CIDRS")
+try:
+    for trusted_proxy_cidr in MONETA_TRUSTED_PROXY_CIDRS:
+        ipaddress.ip_network(trusted_proxy_cidr, strict=False)
+except ValueError as exc:
+    raise ImproperlyConfigured("MONETA_TRUSTED_PROXY_CIDRS contiene una red no valida.") from exc
+if MONETA_TRUST_X_FORWARDED_FOR and not MONETA_TRUSTED_PROXY_CIDRS:
+    raise ImproperlyConfigured(
+        "Define MONETA_TRUSTED_PROXY_CIDRS cuando MONETA_TRUST_X_FORWARDED_FOR=1."
+    )
+MONETA_WEB_SETUP_ENABLED = env_bool("MONETA_WEB_SETUP_ENABLED", False)
+MONETA_SETUP_TOKEN = os.getenv("MONETA_SETUP_TOKEN", "")
+if MONETA_WEB_SETUP_ENABLED and len(MONETA_SETUP_TOKEN) < 32:
+    raise ImproperlyConfigured(
+        "MONETA_SETUP_TOKEN debe tener al menos 32 caracteres cuando MONETA_WEB_SETUP_ENABLED=1."
+    )
+MONETA_LOGIN_MAX_ATTEMPTS = env_int("MONETA_LOGIN_MAX_ATTEMPTS", 10)
+MONETA_LOGIN_LOCKOUT_SECONDS = env_int("MONETA_LOGIN_LOCKOUT_SECONDS", 900)
+MONETA_RECURRING_BATCH_SIZE = env_int("MONETA_RECURRING_BATCH_SIZE", 100)
+MONETA_RECURRING_MAX_CYCLES = env_int("MONETA_RECURRING_MAX_CYCLES", 24)
+for setting_name, setting_value in (
+    ("MONETA_LOGIN_MAX_ATTEMPTS", MONETA_LOGIN_MAX_ATTEMPTS),
+    ("MONETA_LOGIN_LOCKOUT_SECONDS", MONETA_LOGIN_LOCKOUT_SECONDS),
+    ("MONETA_RECURRING_BATCH_SIZE", MONETA_RECURRING_BATCH_SIZE),
+    ("MONETA_RECURRING_MAX_CYCLES", MONETA_RECURRING_MAX_CYCLES),
+):
+    if setting_value < 1:
+        raise ImproperlyConfigured(f"{setting_name} debe ser mayor que cero.")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -142,7 +171,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-_cache_backend = os.getenv("DJANGO_CACHE_BACKEND", "locmem" if DEBUG else "db")
+_cache_backend = os.getenv("DJANGO_CACHE_BACKEND", "locmem" if DEBUG else "file")
 if _cache_backend == "db":
     CACHES = {
         "default": {
@@ -165,6 +194,30 @@ elif _cache_backend == "redis":
         }
     }
 # else: LocMemCache (Django default) — single-process only
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "structured": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "structured",
+        }
+    },
+    "loggers": {
+        "finanzas": {
+            "handlers": ["console"],
+            "level": os.getenv("MONETA_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        }
+    },
+}
 
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"

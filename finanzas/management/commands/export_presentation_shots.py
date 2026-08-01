@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -599,13 +600,16 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--username", default="demo")
-        parser.add_argument("--password", default="demo12345")
+        parser.add_argument("--password-env", default="MONETA_PRESENTATION_PASSWORD")
         parser.add_argument("--width", type=int, default=1600)
         parser.add_argument("--height", type=int, default=1000)
 
     def handle(self, *args, **options):
         username = options["username"]
-        password = options["password"]
+        password_env = options["password_env"]
+        password = os.getenv(password_env, "")
+        if not password:
+            raise CommandError(f"Define {password_env}; la clave no se acepta como argumento CLI.")
         width = options["width"]
         height = options["height"]
 

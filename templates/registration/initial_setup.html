@@ -1,4 +1,4 @@
-{% load static %}
+{% load static finanzas_extras %}
 <!doctype html>
 <html lang="{{ request.LANGUAGE_CODE|default:'es' }}">
 <head>
@@ -20,11 +20,13 @@
     <p>Crea el usuario master para esta instalacion.</p>
     <form method="post">
         {% csrf_token %}
-        {{ form.non_field_errors }}
+        {% if form.non_field_errors %}<div role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        <label class="form-label" for="id_setup_token">Token de configuracion</label>
+        <input class="form-control" type="password" name="setup_token" id="id_setup_token" required autocomplete="one-time-code">
         {% for field in form %}
-            <label class="form-label {% if not forloop.first %}mt-3{% endif %}" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% for error in field.errors %}<strong class="field-error d-block mt-1">{{ error }}</strong>{% endfor %}
+            <label class="form-label mt-3" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% accessible_widget field %}
+            {% if field.errors %}<div id="{{ field.auto_id }}-error" class="field-error d-block mt-1" role="alert">{% for error in field.errors %}<strong>{{ error }}</strong>{% endfor %}</div>{% endif %}
         {% endfor %}
         <button class="btn btn-success w-100 mt-4" type="submit">Crear superadmin</button>
         <a class="btn btn-light w-100 mt-2" href="{% url 'login' %}">Volver al acceso</a>

@@ -16,6 +16,32 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
+class SetupState(models.Model):
+    """Single row used to claim browser-based bootstrap exactly once."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+
+
+class LoginThrottle(models.Model):
+    """Persistent account+network throttle without raw identifiers at rest."""
+
+    network_hash = models.CharField(max_length=64)
+    identity_hash = models.CharField(max_length=64)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["network_hash", "identity_hash"],
+                name="unique_login_throttle_identity_network",
+            )
+        ]
+        indexes = [models.Index(fields=["locked_until"])]
+
+
 class Account(TimeStampedModel):
     """A user-owned financial account whose balance can be rebuilt from transactions."""
 
@@ -80,7 +106,11 @@ class Category(TimeStampedModel):
                 "category_type",
                 Lower("name"),
                 name="unique_category_name_ci_per_user_type",
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(monthly_limit__isnull=True) | models.Q(monthly_limit__gt=0),
+                name="category_monthly_limit_positive",
+            ),
         ]
 
     def __str__(self):
@@ -135,6 +165,14 @@ class FinancialTransaction(TimeStampedModel):
             models.Index(fields=["user", "-date"]),
             models.Index(fields=["user", "status"]),
         ]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name="transaction_amount_positive"),
+            models.UniqueConstraint(
+                fields=["source_recurring", "date"],
+                condition=models.Q(source_recurring__isnull=False) & ~models.Q(status="void"),
+                name="unique_active_recurring_occurrence",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.description} - {self.amount}"
@@ -143,6 +181,38 @@ class FinancialTransaction(TimeStampedModel):
         if self.transaction_type in {self.TransactionType.EXPENSE, self.TransactionType.CARD_PAYMENT}:
             return self.amount * Decimal("-1")
         return self.amount
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.account_id and self.user_id and self.account.user_id != self.user_id:
+            errors["account"] = "La cuenta debe pertenecer al mismo usuario."
+        if self.destination_account_id and self.user_id and self.destination_account.user_id != self.user_id:
+            errors["destination_account"] = "La cuenta destino debe pertenecer al mismo usuario."
+        if self.category_id and self.user_id and self.category.user_id != self.user_id:
+            errors["category"] = "La categoria debe pertenecer al mismo usuario."
+        if self.related_credit_card_id and self.user_id and self.related_credit_card.user_id != self.user_id:
+            errors["related_credit_card"] = "La tarjeta debe pertenecer al mismo usuario."
+        if self.journal_entry_id and self.user_id and self.journal_entry.user_id != self.user_id:
+            errors["journal_entry"] = "El asiento debe pertenecer al mismo usuario."
+        if self.source_recurring_id and self.user_id and self.source_recurring.user_id != self.user_id:
+            errors["source_recurring"] = "El recurrente debe pertenecer al mismo usuario."
+        if self.amount is not None and self.amount <= 0:
+            errors["amount"] = "El monto debe ser mayor que cero."
+        if self.transaction_type == self.TransactionType.TRANSFER:
+            if not self.destination_account_id:
+                errors["destination_account"] = "Selecciona una cuenta destino."
+            elif self.destination_account_id == self.account_id:
+                errors["destination_account"] = "La cuenta destino debe ser distinta."
+        elif self.destination_account_id:
+            errors["destination_account"] = "Solo las transferencias pueden tener cuenta destino."
+        if self.transaction_type == self.TransactionType.CARD_PAYMENT:
+            if not self.related_credit_card_id:
+                errors["related_credit_card"] = "Selecciona la tarjeta pagada."
+        elif self.related_credit_card_id:
+            errors["related_credit_card"] = "Solo los pagos de tarjeta pueden vincular una tarjeta."
+        if errors:
+            raise ValidationError(errors)
 
 
 class JournalEntry(TimeStampedModel):
@@ -196,6 +266,12 @@ class JournalLine(models.Model):
 
     class Meta:
         ordering = ["id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(debit__gt=0, credit=0) | models.Q(credit__gt=0, debit=0)),
+                name="journal_line_exactly_one_side",
+            )
+        ]
 
     def clean(self):
         super().clean()
@@ -203,6 +279,8 @@ class JournalLine(models.Model):
             raise ValidationError("Una linea no puede tener Debe y Haber al mismo tiempo.")
         if not self.debit and not self.credit:
             raise ValidationError("Una linea debe tener Debe o Haber.")
+        if self.entry_id and self.account_id and self.entry.user_id != self.account.user_id:
+            raise ValidationError({"account": "La cuenta y el asiento deben pertenecer al mismo usuario."})
 
     def __str__(self):
         return f"{self.account}: D {self.debit} / H {self.credit}"
@@ -223,6 +301,10 @@ class RecurringPayment(TimeStampedModel):
         QUARTERLY = "quarterly", "Trimestral"
         YEARLY = "yearly", "Anual"
 
+    class SubscriptionCatalog(models.TextChoices):
+        SERVICE = "service", "Servicio"
+        INSURANCE = "insurance", "Seguro"
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     name = models.CharField(max_length=140)
     account = models.ForeignKey(Account, on_delete=models.PROTECT)
@@ -240,6 +322,11 @@ class RecurringPayment(TimeStampedModel):
     next_due_date = models.DateField()
     auto_create_transaction = models.BooleanField(default=False)
     is_subscription = models.BooleanField(default=False)
+    subscription_catalog = models.CharField(
+        max_length=16,
+        choices=SubscriptionCatalog.choices,
+        default=SubscriptionCatalog.SERVICE,
+    )
     is_active = models.BooleanField(default=True)
     last_execution_at = models.DateTimeField(null=True, blank=True)
     last_execution_status = models.CharField(max_length=16, choices=ExecutionStatus.choices, blank=True, default="")
@@ -250,9 +337,28 @@ class RecurringPayment(TimeStampedModel):
         indexes = [
             models.Index(fields=["user", "is_subscription", "next_due_date"]),
         ]
+        constraints = [models.CheckConstraint(condition=models.Q(amount__gt=0), name="recurring_amount_positive")]
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.account_id and self.user_id and self.account.user_id != self.user_id:
+            errors["account"] = "La cuenta debe pertenecer al mismo usuario."
+        if self.category_id and self.user_id and self.category.user_id != self.user_id:
+            errors["category"] = "La categoria debe pertenecer al mismo usuario."
+        if self.amount is not None and self.amount <= 0:
+            errors["amount"] = "El monto debe ser mayor que cero."
+        expected_category = {
+            FinancialTransaction.TransactionType.INCOME: Category.CategoryType.INCOME,
+            FinancialTransaction.TransactionType.EXPENSE: Category.CategoryType.EXPENSE,
+        }.get(self.transaction_type)
+        if self.category_id and expected_category and self.category.category_type != expected_category:
+            errors["category"] = "La categoria no corresponde al tipo de movimiento."
+        if errors:
+            raise ValidationError(errors)
 
 
 class Invoice(TimeStampedModel):
@@ -283,6 +389,10 @@ class Invoice(TimeStampedModel):
     class Meta:
         ordering = ["-issue_date", "-created_at"]
         unique_together = ["user", "number", "invoice_type"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(subtotal__gt=0), name="invoice_subtotal_positive"),
+            models.CheckConstraint(condition=models.Q(tax__gte=0), name="invoice_tax_nonnegative"),
+        ]
 
     @property
     def total(self):
@@ -290,6 +400,20 @@ class Invoice(TimeStampedModel):
 
     def __str__(self):
         return f"{self.number} - {self.counterparty}"
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.subtotal is not None and self.subtotal <= 0:
+            errors["subtotal"] = "El subtotal debe ser mayor que cero."
+        if self.tax is not None and self.tax < 0:
+            errors["tax"] = "El impuesto no puede ser negativo."
+        if self.due_date and self.issue_date and self.due_date < self.issue_date:
+            errors["due_date"] = "El vencimiento no puede ser anterior a la emision."
+        if self.journal_entry_id and self.user_id and self.journal_entry.user_id != self.user_id:
+            errors["journal_entry"] = "El asiento debe pertenecer al mismo usuario."
+        if errors:
+            raise ValidationError(errors)
 
 
 class CreditCard(TimeStampedModel):
@@ -315,6 +439,23 @@ class CreditCard(TimeStampedModel):
 
     class Meta:
         ordering = ["account__name"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(credit_limit__gt=0), name="credit_card_limit_positive"),
+            models.CheckConstraint(condition=models.Q(current_debt__gte=0), name="credit_card_debt_nonnegative"),
+            models.CheckConstraint(condition=models.Q(annual_interest_rate__gte=0), name="credit_card_interest_nonnegative"),
+            models.CheckConstraint(condition=models.Q(statement_day__gte=1, statement_day__lte=31), name="credit_card_statement_day_range"),
+            models.CheckConstraint(condition=models.Q(payment_due_day__gte=1, payment_due_day__lte=31), name="credit_card_due_day_range"),
+        ]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.account_id and self.user_id and self.account.user_id != self.user_id:
+            errors["account"] = "La cuenta debe pertenecer al mismo usuario."
+        if self.account_id and self.account.account_type != Account.AccountType.CREDIT_CARD:
+            errors["account"] = "La cuenta vinculada debe ser de tipo tarjeta de credito."
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def utilization_percent(self):

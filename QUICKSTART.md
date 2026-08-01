@@ -8,7 +8,7 @@ Si no tienes experiencia tecnica, usa primero esta guia. Para instalacion mas co
 
 Necesitas:
 
-- Python 3.10 o superior instalado.
+- Python 3.12 o superior instalado (requisito de Django 6).
 - La carpeta de Moneta descargada o descomprimida.
 - Una terminal abierta dentro de la carpeta de Moneta.
 
@@ -54,6 +54,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
+$env:DJANGO_DEBUG = "1"  # Solo para esta prueba local en 127.0.0.1
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver 127.0.0.1:8000
@@ -72,6 +73,7 @@ python -m venv .venv
 .venv\Scripts\activate.bat
 pip install -r requirements.txt
 copy .env.example .env
+set DJANGO_DEBUG=1
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver 127.0.0.1:8000
@@ -90,6 +92,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+export DJANGO_DEBUG=1  # Solo para esta prueba local en 127.0.0.1
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver 127.0.0.1:8000
@@ -103,23 +106,11 @@ http://127.0.0.1:8000/
 
 ## Uso En Otra PC De La Misma Red
 
-Si Moneta esta instalado en un NAS o en otra computadora de tu red local, ejecuta:
-
-```bash
-python manage.py runserver 0.0.0.0:8000
-```
-
-Luego entra desde otro equipo usando la IP del servidor:
-
-```text
-http://IP_DEL_SERVIDOR:8000/
-```
-
-Ejemplo:
-
-```text
-http://192.168.1.50:8000/
-```
+Si Moneta esta instalado en un NAS o en otra computadora, publicalo mediante
+un servidor de aplicacion y un proxy inverso con HTTPS, o accede por una VPN
+privada. `runserver` es exclusivamente para desarrollo local y no debe
+escuchar en `0.0.0.0`. Configura el dominio HTTPS en `DJANGO_ALLOWED_HOSTS` y
+`DJANGO_CSRF_TRUSTED_ORIGINS`.
 
 ## Primer Uso
 
@@ -141,5 +132,5 @@ Despues de iniciar sesion:
 - Si `python` no funciona en Windows, prueba `py`.
 - Si el puerto `8000` esta ocupado, usa otro: `python manage.py runserver 127.0.0.1:8001`.
 - Si PowerShell bloquea la activacion, usa Windows CMD o ejecuta: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-- Si accedes desde otra PC o NAS, agrega la IP/dominio en `DJANGO_ALLOWED_HOSTS` dentro del archivo `.env`.
+- Si accedes desde otra PC o NAS, usa HTTPS/VPN y agrega el dominio en `DJANGO_ALLOWED_HOSTS` dentro del archivo `.env`.
 - No uses `DJANGO_DEBUG=1` si vas a publicar Moneta en Internet.

@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.core.exceptions import ValidationError
+from django.forms.models import BaseInlineFormSet
 
 from .models import (
     Account,
@@ -13,8 +15,35 @@ from .models import (
 )
 
 
+class BalancedJournalLineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        debit_total = 0
+        credit_total = 0
+        line_count = 0
+        for form in self.forms:
+            data = getattr(form, "cleaned_data", {})
+            if not data or data.get("DELETE"):
+                continue
+            account = data.get("account")
+            if not account:
+                continue
+            if self.instance.user_id and account.user_id != self.instance.user_id:
+                raise ValidationError("Todas las cuentas deben pertenecer al usuario del asiento.")
+            debit_total += data.get("debit") or 0
+            credit_total += data.get("credit") or 0
+            line_count += 1
+        if line_count < 2:
+            raise ValidationError("El asiento necesita al menos dos lineas.")
+        if debit_total != credit_total:
+            raise ValidationError("El asiento debe mantener Debe y Haber iguales.")
+
+
 class JournalLineInline(admin.TabularInline):
     model = JournalLine
+    formset = BalancedJournalLineFormSet
     extra = 2
 
 

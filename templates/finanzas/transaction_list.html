@@ -37,33 +37,33 @@
 
 <section class="panel compact-panel">
     <form method="get" class="filters-grid">
-        <input class="form-control" type="text" name="q" placeholder="{% if lang_code|slice:':2' == 'en' %}Search description or contact{% else %}Buscar descripci&oacute;n o contacto{% endif %}" value="{{ filters.q }}">
-        <select class="form-select" name="transaction_type">
+        <input class="form-control" type="search" name="q" aria-label="{% if lang_code|slice:':2' == 'en' %}Search description or contact{% else %}Buscar descripcion o contacto{% endif %}" placeholder="{% if lang_code|slice:':2' == 'en' %}Search description or contact{% else %}Buscar descripci&oacute;n o contacto{% endif %}" value="{{ filters.q }}">
+        <select class="form-select" name="transaction_type" aria-label="{% if lang_code|slice:':2' == 'en' %}Transaction type{% else %}Tipo de movimiento{% endif %}">
             <option value="">{% if lang_code|slice:':2' == 'en' %}All types{% else %}Todos los tipos{% endif %}</option>
             {% for key, label in type_choices %}
                 <option value="{{ key }}" {% if filters.transaction_type == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-        <select class="form-select" name="status">
+        <select class="form-select" name="status" aria-label="{% if lang_code|slice:':2' == 'en' %}Transaction status{% else %}Estado del movimiento{% endif %}">
             <option value="">{% if lang_code|slice:':2' == 'en' %}All statuses{% else %}Todos los estados{% endif %}</option>
             {% for key, label in status_choices %}
                 <option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-        <select class="form-select" name="account">
+        <select class="form-select" name="account" aria-label="{% if lang_code|slice:':2' == 'en' %}Account{% else %}Cuenta{% endif %}">
             <option value="">{% if lang_code|slice:':2' == 'en' %}All accounts{% else %}Todas las cuentas{% endif %}</option>
             {% for account in accounts %}
                 <option value="{{ account.id }}" {% if filters.account == account.id|stringformat:"s" %}selected{% endif %}>{{ account.name }}</option>
             {% endfor %}
         </select>
-        <select class="form-select" name="category">
+        <select class="form-select" name="category" aria-label="{% if lang_code|slice:':2' == 'en' %}Category{% else %}Categoria{% endif %}">
             <option value="">{% if lang_code|slice:':2' == 'en' %}All categories{% else %}Todas las categor&iacute;as{% endif %}</option>
             {% for category in categories %}
                 <option value="{{ category.id }}" {% if filters.category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
             {% endfor %}
         </select>
-        <input class="form-control" type="date" name="date_from" value="{{ filters.date_from }}">
-        <input class="form-control" type="date" name="date_to" value="{{ filters.date_to }}">
+        <input class="form-control" type="date" name="date_from" aria-label="{% if lang_code|slice:':2' == 'en' %}From date{% else %}Fecha desde{% endif %}" value="{{ filters.date_from }}">
+        <input class="form-control" type="date" name="date_to" aria-label="{% if lang_code|slice:':2' == 'en' %}To date{% else %}Fecha hasta{% endif %}" value="{{ filters.date_to }}">
         <div class="filters-actions">
             <button class="btn btn-success btn-sm" type="submit">{% if lang_code|slice:':2' == 'en' %}Filter{% else %}Filtrar{% endif %}</button>
             <a class="btn btn-light btn-sm" href="{% url 'finanzas:transaction_list' %}">{% if lang_code|slice:':2' == 'en' %}Clear{% else %}Limpiar{% endif %}</a>

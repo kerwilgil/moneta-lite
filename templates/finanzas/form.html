@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load finanzas_extras i18n %}
 {% block title %}{{ title }}{% endblock %}
 {% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Form{% else %}Formulario{% endif %}{% endblock %}
 {% block content %}
@@ -25,22 +25,22 @@
     <form method="post" novalidate>
         {% csrf_token %}
         {% if form.non_field_errors %}
-            <div class="form-alert">{{ form.non_field_errors }}</div>
+            <div class="form-alert" role="alert">{{ form.non_field_errors }}</div>
         {% endif %}
         <div class="form-grid">
             {% for field in form %}
                 <div class="form-field {% if field.field.widget.input_type == 'checkbox' %}form-field-check{% endif %}">
                     {% if field.field.widget.input_type == 'checkbox' %}
                         <label class="form-check-label">
-                            {{ field }}
+                            {% accessible_widget field %}
                             <span>{{ field.label }}</span>
                         </label>
                     {% else %}
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
+                        {% accessible_widget field %}
                     {% endif %}
-                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-                    {% for error in field.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+                    {% if field.help_text %}<small id="{{ field.auto_id }}-help">{{ field.help_text }}</small>{% endif %}
+                    {% if field.errors %}<div id="{{ field.auto_id }}-error" class="field-error" role="alert">{% for error in field.errors %}<strong>{{ error }}</strong>{% endfor %}</div>{% endif %}
                 </div>
             {% endfor %}
         </div>

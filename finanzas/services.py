@@ -27,14 +27,16 @@ def credit_card_debt_total(user):
     return money_total(CreditCard.objects.filter(user=user), "current_debt")
 
 
-def mark_overdue_invoices(user, today=None):
-    """Mark pending invoices as overdue when due_date is before today."""
+def mark_overdue_invoices(user=None, today=None):
+    """Mark pending invoices overdue, optionally scoped to one user."""
     today = today or timezone.localdate()
-    return Invoice.objects.filter(
-        user=user,
+    queryset = Invoice.objects.filter(
         status=Invoice.Status.PENDING,
         due_date__lt=today,
-    ).update(status=Invoice.Status.OVERDUE)
+    )
+    if user is not None:
+        queryset = queryset.filter(user=user)
+    return queryset.update(status=Invoice.Status.OVERDUE)
 
 
 def _month_start(base_date):

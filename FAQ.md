@@ -22,17 +22,10 @@ dependencies are available. See `INSTALL.md`.
 
 ## Can I Access Moneta From Another Computer?
 
-Yes. Run the server with:
-
-```bash
-python manage.py runserver 0.0.0.0:8000
-```
-
-Then open:
-
-```text
-http://IP_DEL_SERVIDOR:8000/
-```
+Yes, through an HTTPS reverse proxy or a private VPN. Django's `runserver` is
+for local development only and must not be exposed to a LAN or the Internet.
+Configure the proxy address in `MONETA_TRUSTED_PROXY_CIDRS` only when forwarded
+headers are enabled.
 
 ## Should I Use A Simple Demo Password?
 
