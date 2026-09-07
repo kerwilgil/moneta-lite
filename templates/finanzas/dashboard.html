@@ -71,7 +71,7 @@
                     </em>
                 </div>
             {% empty %}
-                <div class="empty-state-rich" style="grid-column: 1 / -1;">
+                <div class="empty-state-rich empty-state-full">
                     <span class="empty-icon" aria-hidden="true">+</span>
                     <strong>{% if lang_code|slice:':2' == 'en' %}No accounts yet{% else %}A&uacute;n no hay cuentas{% endif %}</strong>
                     <p>{% if lang_code|slice:':2' == 'en' %}Create your initial accounts to start tracking balance and cash flow.{% else %}Crea tus cuentas iniciales para comenzar a seguir balance y flujo de caja.{% endif %}</p>
@@ -122,7 +122,7 @@
                 <small>{% if lang_code|slice:':2' == 'en' %}Due{% else %}Vence{% endif %}: {{ payment.next_due_date }}</small>
             </article>
         {% empty %}
-            <div class="empty-state-rich" style="grid-column: 1 / -1;">
+            <div class="empty-state-rich empty-state-full">
                 <span class="empty-icon" aria-hidden="true">&#10003;</span>
                 <strong>{% if lang_code|slice:':2' == 'en' %}No upcoming commitments{% else %}Sin compromisos pr&oacute;ximos{% endif %}</strong>
                 <p>{% if lang_code|slice:':2' == 'en' %}You have no recurring or subscription payments due soon.{% else %}No tienes pagos recurrentes o suscripciones por vencer pronto.{% endif %}</p>

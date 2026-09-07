@@ -755,7 +755,7 @@ def transaction_create(request):
         "Registra ingresos, gastos, pagos de tarjeta, cobros o transferencias.",
         "Guardar movimiento",
         extra_context=category_helper_context(),
-        after_save=lambda obj: (sync_transaction_journal(obj), rebuild_account_balances(request.user)),
+        after_save=lambda obj: (sync_transaction_journal(obj), rebuild_account_balances(request.user, force_account_ids=[obj.account_id, obj.destination_account_id, obj.related_credit_card.account_id if obj.related_credit_card else None])),
     )
 
 
@@ -833,7 +833,7 @@ def account_create(request):
         "Nueva cuenta",
         "Agrega bancos, efectivo, tarjetas, préstamos, inversiones o capital.",
         "Guardar cuenta",
-        after_save=lambda obj: (sync_credit_card_account_balance(obj), rebuild_account_balances(request.user)),
+        after_save=lambda obj: (sync_credit_card_account_balance(obj), rebuild_account_balances(request.user, force_account_ids=[obj.id])),
     )
 
 
@@ -849,7 +849,7 @@ def account_edit(request, pk):
         "Ajusta tipo, moneda y balances base.",
         "Guardar cambios",
         instance=instance,
-        after_save=lambda obj: (sync_credit_card_account_balance(obj), rebuild_account_balances(request.user)),
+        after_save=lambda obj: (sync_credit_card_account_balance(obj), rebuild_account_balances(request.user, force_account_ids=[obj.id])),
     )
 
 
@@ -1286,7 +1286,7 @@ def credit_card_create(request):
             "helper_url": "finanzas:account_create",
             "helper_label": "Crear cuenta de tarjeta",
         },
-        after_save=lambda obj: (rebuild_account_balances(request.user), sync_credit_card_account_balance(obj)),
+        after_save=lambda obj: (rebuild_account_balances(request.user, force_account_ids=[obj.account_id]), sync_credit_card_account_balance(obj)),
     )
 
 
@@ -1303,7 +1303,7 @@ def credit_card_edit(request, pk):
         "Ajusta deuda, tasa y configuracion de pagos.",
         "Guardar cambios",
         instance=instance,
-        after_save=lambda obj: (rebuild_account_balances(request.user), sync_credit_card_account_balance(obj)),
+        after_save=lambda obj: (rebuild_account_balances(request.user, force_account_ids=[obj.account_id]), sync_credit_card_account_balance(obj)),
     )
 
 

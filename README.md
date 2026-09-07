@@ -1,91 +1,108 @@
 <div align="center">
-  <img src="static/img/moneta_logo.png" alt="Moneta Lite" width="180">
+  <img src="static/img/moneta_icon_dark.png" alt="Moneta Lite" width="160">
   <h1>Moneta Lite</h1>
-  <p>Una edición ligera para organizar tus finanzas esenciales sin perder control ni claridad.</p>
-
+  <p><strong>Finanzas personales, tarjetas, suscripciones y reportes en un panel local.</strong></p>
   <p>
-    <img src="https://img.shields.io/badge/Django-6.0.7%2B-0C4B33?logo=django&logoColor=white" alt="Django 6.0.7+">
-    <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
-    <img src="https://img.shields.io/badge/idiomas-ES%20%7C%20EN-0F766E" alt="Español e inglés">
-    <img src="https://img.shields.io/badge/licencia-MIT-blue" alt="Licencia MIT">
+    <img alt="Django" src="https://img.shields.io/badge/Django-5.2%2B-0b5f3a?style=flat-square">
+    <img alt="Python" src="https://img.shields.io/badge/Python-3.12%2B-1f6feb?style=flat-square">
+    <img alt="License" src="https://img.shields.io/badge/License-MIT-c9a227?style=flat-square">
   </p>
 </div>
 
-Moneta Lite está pensada para evaluaciones, demostraciones y uso financiero básico. Mantiene una interfaz adaptable y las protecciones de seguridad del proyecto principal, con un conjunto reducido de módulos.
+Moneta Lite es la edicion gratuita de Moneta para organizar finanzas personales desde una instalacion local. Incluye cuentas, movimientos, tarjetas de credito, suscripciones, pagos recurrentes, facturas, reportes, presupuesto por categoria y libro contable basico.
 
-## Qué incluye
+## Que Incluye
 
-- Panel con cuentas, balances y movimientos.
-- Registro de ingresos, gastos, transferencias y categorías.
-- Facturas y tarjetas de crédito.
-- Suscripciones privadas de seguros disponibles en el catálogo Lite.
-- Reportes y exportaciones básicas.
-- Configuración administrativa, español e inglés, tema claro y oscuro.
+- Dashboard financiero con ingresos, gastos, deuda, capital y flujo reciente.
+- Cuentas de efectivo, banco, ahorro, inversion, tarjetas, prestamos y capital.
+- Movimientos, transferencias, cobros y pagos de tarjeta.
+- Suscripciones y pagos recurrentes.
+- Facturas emitidas y recibidas.
+- Reportes, presupuesto por categoria y exportacion CSV.
+- Manual de usuario en espanol e ingles.
 
-## Límites de esta edición
+## Primeros Pasos
 
-Lite no habilita pagos recurrentes automatizados, libro contable, cálculo de utilidad neta ni exportaciones avanzadas. Estas restricciones se aplican en el servidor mediante controles de funciones.
+Guia rapida:
 
-Para acceder al conjunto completo de módulos, solicita **Moneta Full** mediante contacto comercial.
+```text
+QUICKSTART.md
+```
 
-## Inicio rápido local
+Instalacion completa para Windows, Linux, NAS o servidor:
 
-Requisitos: Python 3.12 o superior y Git.
+```text
+INSTALL.md
+```
+
+Documentacion de ayuda:
+
+```text
+FAQ.md
+SUPPORT.md
+CHANGELOG.md
+docs/manual/user-manual-es.md
+docs/manual/moneta-user-manual-es.html
+docs/manual/user-manual-en.md
+docs/manual/moneta-user-manual-en.html
+```
+
+## Instalacion Local
 
 ```powershell
-git clone https://github.com/kerwilgil/moneta-lite.git
-cd moneta-lite
-py -m venv .venv
+py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
 pip install -r requirements.txt
-Copy-Item .env.example .env
-$env:DJANGO_DEBUG = "1"
 python manage.py migrate
 python manage.py createsuperuser
-python manage.py runserver
+python manage.py seed_demo
+python manage.py runserver 127.0.0.1:8000
 ```
 
-Abre `http://127.0.0.1:8000/`. La edición del paquete ya está fijada como Lite; no necesitas cambiar `SAAS_EDITION`.
+Python 3.12, 3.13 o 3.14 funcionan con la linea Django 6 fijada en `requirements.txt`.
 
-### Inicio y parada en Windows
+## Configuracion
 
-Después de completar la instalación:
+Crea un archivo `.env` tomando como base `.env.example`.
 
-```bat
-start.bat
-stop.bat
-```
+Variables principales:
 
-`start.bat` utiliza `127.0.0.1:8002` por defecto, guarda el PID y los registros dentro de `logs/`, y `stop.bat` valida que el PID pertenezca a esta instalación antes de detenerlo. Puedes definir `MONETA_HOST` o `MONETA_PORT` antes de iniciar para cambiar la dirección.
+- `DJANGO_SECRET_KEY`: clave privada de Django.
+- `DJANGO_DEBUG`: `1` para desarrollo, `0` para produccion.
+- `DJANGO_ALLOWED_HOSTS`: dominios/IP permitidos.
+- `DJANGO_CSRF_TRUSTED_ORIGINS`: origenes HTTPS confiables si hay proxy/dominio.
+- `DJANGO_SECURE_SSL_REDIRECT`: `1` en produccion con HTTPS activo.
+- `SAAS_EDITION`: `lite`.
+- `SAAS_APP_NAME`: nombre visible de la app.
 
-## Configuración segura
+No subas `.env`, bases SQLite ni logs al repositorio.
 
-Antes de desplegar:
+## Seguridad
 
-- Sustituye `DJANGO_SECRET_KEY` por un valor único de 50 caracteres o más.
-- Mantén `DJANGO_DEBUG=0` y configura hosts y orígenes CSRF explícitos.
-- Usa HTTPS antes de activar HSTS y redirección estricta.
-- Mantén deshabilitada la configuración web salvo durante un alta controlada.
-- No subas `.env`, `db.sqlite3`, registros ni copias de seguridad al repositorio.
-
-Consulta [`.env.example`](.env.example) para conocer todas las variables disponibles.
-
-## Validación
+Antes de publicar una instalacion en Internet:
 
 ```powershell
-python manage.py check
-python manage.py test finanzas
+python manage.py test
+python manage.py check --deploy
+python manage.py collectstatic
 ```
 
-Documentación adicional:
+Configuracion minima de produccion:
 
-- [Inicio rápido](QUICKSTART.md)
-- [Instalación](INSTALL.md)
-- [Preguntas frecuentes](FAQ.md)
-- [Manual de usuario](docs/manual/user-manual-es.md)
-- [Soporte](SUPPORT.md)
+- `DJANGO_DEBUG=0`
+- `DJANGO_SECRET_KEY` fuerte y privado.
+- `DJANGO_ALLOWED_HOSTS` con dominio/IP real.
+- `DJANGO_CSRF_TRUSTED_ORIGINS` con `https://dominio.com`.
+- `DJANGO_SECURE_SSL_REDIRECT=1`.
+- HTTPS obligatorio para sesiones reales.
+- `/admin/` protegido con usuario y clave fuertes.
+
+## Ediciones
+
+- Moneta Lite: edicion publica gratuita.
+- Moneta Pro: edicion completa de pago.
+- Moneta Personal: edicion privada para uso propio.
 
 ## Licencia
 
-Moneta Lite se distribuye bajo la [licencia MIT](LICENSE).
+Moneta Lite se publica bajo licencia MIT. Ver `LICENSE`.

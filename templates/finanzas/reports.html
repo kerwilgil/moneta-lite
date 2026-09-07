@@ -95,7 +95,7 @@
                         <div class="budget-usage">
                             <span>{{ row.usage_percent|floatformat:2 }}%</span>
                             <div class="progress">
-                                <div class="progress-bar {% if row.status == 'over' %}bg-danger{% elif row.status == 'warning' %}bg-warning{% else %}bg-success{% endif %}" role="progressbar" style="width: {% if row.usage_percent > 100 %}100{% else %}{{ row.usage_percent }}{% endif %}%" aria-valuenow="{{ row.usage_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                <div class="progress-bar {% if row.status == 'over' %}bg-danger{% elif row.status == 'warning' %}bg-warning{% else %}bg-success{% endif %}" role="progressbar" aria-valuenow="{{ row.usage_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
                         </div>
                     </td>

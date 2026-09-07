@@ -2,6 +2,7 @@ from decimal import Decimal
 from pathlib import Path
 import ipaddress
 import os
+import secrets
 
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
@@ -34,15 +35,16 @@ DEBUG = env_bool("DJANGO_DEBUG", False)
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     if DEBUG:
-        SECRET_KEY = "dev-only-change-me"
+        SECRET_KEY = secrets.token_urlsafe(64)
     else:
         raise ImproperlyConfigured("Define DJANGO_SECRET_KEY cuando DJANGO_DEBUG=0.")
-elif not DEBUG and (
-    SECRET_KEY == "dev-only-change-me"
-    or SECRET_KEY == "replace-this-with-a-unique-secret-key-of-at-least-50-random-characters"
-    or len(SECRET_KEY) < 50
+if SECRET_KEY in (
+    "dev-only-change-me",
+    "replace-this-with-a-unique-secret-key-of-at-least-50-random-characters",
 ):
-    raise ImproperlyConfigured("DJANGO_SECRET_KEY debe ser unica, privada y tener al menos 50 caracteres en produccion.")
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY no puede ser un valor por defecto conocido.")
+if len(SECRET_KEY) < 50:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY debe tener al menos 50 caracteres.")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 APP_EDITION = normalize_edition(os.getenv("SAAS_EDITION", "demo"))
@@ -85,7 +87,7 @@ if MONETA_WEB_SETUP_ENABLED and len(MONETA_SETUP_TOKEN) < 32:
 MONETA_LOGIN_MAX_ATTEMPTS = env_int("MONETA_LOGIN_MAX_ATTEMPTS", 10)
 MONETA_LOGIN_LOCKOUT_SECONDS = env_int("MONETA_LOGIN_LOCKOUT_SECONDS", 900)
 MONETA_RECURRING_BATCH_SIZE = env_int("MONETA_RECURRING_BATCH_SIZE", 100)
-MONETA_RECURRING_MAX_CYCLES = env_int("MONETA_RECURRING_MAX_CYCLES", 24)
+MONETA_RECURRING_MAX_CYCLES = env_int("MONETA_RECURRING_MAX_CYCLES", 12)
 for setting_name, setting_value in (
     ("MONETA_LOGIN_MAX_ATTEMPTS", MONETA_LOGIN_MAX_ATTEMPTS),
     ("MONETA_LOGIN_LOCKOUT_SECONDS", MONETA_LOGIN_LOCKOUT_SECONDS),

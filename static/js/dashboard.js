@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    initProgressBars();
+
     const canvas = document.getElementById("cashFlowChart");
     if (!canvas || typeof Chart === "undefined") {
         return;
@@ -178,3 +180,13 @@ document.addEventListener("DOMContentLoaded", () => {
         window.requestAnimationFrame(syncSliderMaxWithWallet);
     });
 });
+
+function initProgressBars() {
+    document.querySelectorAll(".progress-bar[aria-valuenow]").forEach((bar) => {
+        const value = parseFloat(bar.getAttribute("aria-valuenow"));
+        if (!Number.isNaN(value)) {
+            const clamped = Math.min(100, Math.max(0, value));
+            bar.style.width = `${clamped}%`;
+        }
+    });
+}
