@@ -29,27 +29,19 @@ class Command(BaseCommand):
             default="MONETA_MCP_TOKEN",
             help="Environment variable holding the MCP bearer token.",
         )
-        parser.add_argument(
-            "--allow-unauthenticated",
-            action="store_true",
-            help="Start even without a valid token (tool calls will be denied).",
-        )
 
     def handle(self, *args, **options):
         raw = os.environ.get(options["token_env"], "").strip()
         token = resolve_env_token(raw)
-        if token is None and not options["allow_unauthenticated"]:
+        if token is None:
             raise CommandError(
                 f"No hay un token MCP valido en ${options['token_env']}. "
                 "Genera uno en Configuracion -> Integraciones -> Moneta MCP."
             )
-        if token is not None:
-            set_current_token(token)
-            token.touch()
-            self.stderr.write(f"moneta-mcp: autenticado como {token.user} "
-                              f"(scopes={token.scope_list})")
-        else:
-            self.stderr.write("moneta-mcp: iniciando SIN autenticacion")
+        set_current_token(token)
+        token.touch()
+        self.stderr.write(f"moneta-mcp: autenticado como {token.user} "
+                          f"(scopes={token.scope_list})")
 
         asyncio.run(self._serve())
 
