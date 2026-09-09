@@ -96,6 +96,14 @@
             <canvas id="cashFlowChart" role="img" aria-label="{% if lang_code|slice:':2' == 'en' %}Monthly cash-flow bar chart{% else %}Grafico de barras del flujo de caja mensual{% endif %}">
                 {% if lang_code|slice:':2' == 'en' %}Monthly cash-flow values are also available in the page data.{% else %}Los valores mensuales del flujo de caja tambien estan disponibles en los datos de la pagina.{% endif %}
             </canvas>
+            <!-- Tabular fallback for accessibility/no-JS -->
+            <table class="visually-hidden cash-flow-table" aria-hidden="true">
+                <caption>{% if lang_code|slice:':2' == 'en' %}Monthly cash flow values{% else %}Valores mensuales de flujo de caja{% endif %}</caption>
+                <thead>
+                    <tr><th scope="col">{% if lang_code|slice:':2' == 'en' %}Month{% else %}Mes{% endif %}</th><th scope="col">{% if lang_code|slice:':2' == 'en' %}Value{% else %}Valor{% endif %}</th></tr>
+                </thead>
+                <tbody id="cashFlowTableBody"></tbody>
+            </table>
         </div>
     </article>
 </section>

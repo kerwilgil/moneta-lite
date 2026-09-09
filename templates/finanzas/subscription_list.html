@@ -1,114 +1,114 @@
 {% extends "base.html" %}
 {% load static %}
 {% load i18n %}
-{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Subscriptions{% else %}Suscripciones{% endif %}{% endblock %}
-{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Subscriptions{% else %}Suscripciones{% endif %}{% endblock %}
+{% block title %}{% trans "Suscripciones" %}{% endblock %}
+{% block section %}{% trans "Suscripciones" %}{% endblock %}
 {% block content %}
-{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+{% load i18n %}
 <section class="page-heading">
     <div>
-        <h1>{% if lang_code|slice:':2' == 'en' %}Subscriptions{% else %}Suscripciones{% endif %}</h1>
-        <p>{% if lang_code|slice:':2' == 'en' %}Services, memberships and silent recurring spend.{% else %}Servicios, afiliaciones y gasto recurrente silencioso.{% endif %}</p>
+        <h1>{% trans "Suscripciones" %}</h1>
+        <p>{% trans "Servicios, afiliaciones y gasto recurrente silencioso." %}</p>
     </div>
     <div class="heading-actions">
         {% if not edition.is_lite %}
         <form method="post" action="{% url 'finanzas:subscription_run_now' %}">
             {% csrf_token %}
-            <button class="btn btn-light btn-sm" type="submit">{% if lang_code|slice:':2' == 'en' %}Run now{% else %}Ejecutar ahora{% endif %}</button>
+            <button class="btn btn-light btn-sm" type="submit">{% trans "Ejecutar ahora" %}</button>
         </form>
         {% endif %}
         {% if features.exports_advanced %}
-        <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_subscriptions_csv' %}">{% if lang_code|slice:':2' == 'en' %}Export CSV{% else %}Exportar CSV{% endif %}</a>
+        <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_subscriptions_csv' %}">{% trans "Exportar CSV" %}</a>
         {% endif %}
-        <a class="btn btn-light btn-sm" href="{% url 'finanzas:category_create' %}">{% if lang_code|slice:':2' == 'en' %}New category{% else %}Nueva categor&iacute;a{% endif %}</a>
+        <a class="btn btn-light btn-sm" href="{% url 'finanzas:category_create' %}">{% trans "Nueva categoría" %}</a>
         {% if not edition.is_lite %}
-        <a class="btn btn-success btn-sm" href="{% url 'finanzas:subscription_create' %}">{% if lang_code|slice:':2' == 'en' %}New subscription{% else %}Nueva suscripci&oacute;n{% endif %}</a>
+        <a class="btn btn-success btn-sm" href="{% url 'finanzas:subscription_create' %}">{% trans "Nueva suscripción" %}</a>
         {% endif %}
     </div>
 </section>
 
 <section class="mini-metric-grid">
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Monthly projection{% else %}Proyecci&oacute;n mensual{% endif %}</span>
+        <span>{% trans "Proyección mensual" %}</span>
         <strong>${{ summary_monthly_projection|floatformat:2 }}</strong>
     </article>
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Charges in 30 days{% else %}Cobros en 30 d&iacute;as{% endif %}</span>
+        <span>{% trans "Cobros en 30 días" %}</span>
         <strong>${{ summary_due_next_30|floatformat:2 }}</strong>
     </article>
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Active subscriptions{% else %}Suscripciones activas{% endif %}</span>
+        <span>{% trans "Suscripciones activas" %}</span>
         <strong>{{ summary_active_count }}</strong>
     </article>
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Average active cost{% else %}Costo activo promedio{% endif %}</span>
+        <span>{% trans "Costo activo promedio" %}</span>
         <strong>${{ summary_average_active|floatformat:2 }}</strong>
     </article>
 </section>
 
 <section class="panel compact-panel">
     <form method="get" class="filters-grid filters-grid-short">
-        <select class="form-select" name="active" aria-label="{% if lang_code|slice:':2' == 'en' %}Activity status{% else %}Estado de actividad{% endif %}">
-            <option value="all" {% if filters.active == "all" %}selected{% endif %}>{% if lang_code|slice:':2' == 'en' %}All{% else %}Todas{% endif %}</option>
-            <option value="active" {% if filters.active == "active" %}selected{% endif %}>{% if lang_code|slice:':2' == 'en' %}Only active{% else %}Solo activas{% endif %}</option>
-            <option value="inactive" {% if filters.active == "inactive" %}selected{% endif %}>{% if lang_code|slice:':2' == 'en' %}Only inactive{% else %}Solo inactivas{% endif %}</option>
+        <select class="form-select" name="active" aria-label="{% trans 'Estado de actividad' %}">
+            <option value="all" {% if filters.active == "all" %}selected{% endif %}>{% trans "Todas" %}</option>
+            <option value="active" {% if filters.active == "active" %}selected{% endif %}>{% trans "Solo activas" %}</option>
+            <option value="inactive" {% if filters.active == "inactive" %}selected{% endif %}>{% trans "Solo inactivas" %}</option>
         </select>
         <div class="filters-actions">
-            <button class="btn btn-success btn-sm" type="submit">{% if lang_code|slice:':2' == 'en' %}Filter{% else %}Filtrar{% endif %}</button>
-            <a class="btn btn-light btn-sm" href="{% url 'finanzas:subscription_list' %}">{% if lang_code|slice:':2' == 'en' %}Clear{% else %}Limpiar{% endif %}</a>
+            <button class="btn btn-success btn-sm" type="submit">{% trans "Filtrar" %}</button>
+            <a class="btn btn-light btn-sm" href="{% url 'finanzas:subscription_list' %}">{% trans "Limpiar" %}</a>
         </div>
     </form>
 </section>
 
 {% if subscription_presets %}
-    <section class="panel">
-        <div class="panel-header">
-            <div>
-                <h2>{% if lang_code|slice:':2' == 'en' %}Recommended catalog{% else %}Cat&aacute;logo recomendado{% endif %}</h2>
-                <p>{% if lang_code|slice:':2' == 'en' %}Add services in one click with preconfigured values.{% else %}Agrega servicios en un clic con valores preconfigurados.{% endif %}</p>
-            </div>
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h2>{% trans "Catálogo recomendado" %}</h2>
+            <p>{% trans "Agrega servicios en un clic con valores preconfigurados." %}</p>
         </div>
-        <div class="subscription-preset-grid">
-            {% for preset in subscription_presets %}
-                <article class="subscription-preset-card">
-                    <div class="subscription-preset-head">
-                        {% if preset.logo_static %}
-                            <img class="service-logo" src="{% static preset.logo_static %}" alt="{{ preset.name }}" loading="lazy">
-                        {% elif preset.logo_url %}
-                            <img class="service-logo" src="{{ preset.logo_url }}" alt="{{ preset.name }}" loading="lazy">
-                        {% endif %}
-                        <span class="service-logo-fallback{% if preset.logo_static or preset.logo_url %} d-none{% endif %}">{{ preset.name|first|upper }}</span>
-                        <strong>{{ preset.name }}</strong>
-                    </div>
-                    <a class="btn btn-light btn-sm w-100" href="{% url 'finanzas:subscription_create' %}?preset={{ preset.key }}">{% if lang_code|slice:':2' == 'en' %}Add{% else %}Agregar{% endif %}</a>
-                </article>
-            {% endfor %}
-        </div>
-    </section>
+    </div>
+    <div class="subscription-preset-grid">
+        {% for preset in subscription_presets %}
+            <article class="subscription-preset-card">
+                <div class="subscription-preset-head">
+                    {% if preset.logo_static %}
+                        <img class="service-logo" src="{% static preset.logo_static %}" alt="{{ preset.name }}" loading="lazy">
+                    {% elif preset.logo_url %}
+                        <img class="service-logo" src="{{ preset.logo_url }}" alt="{{ preset.name }}" loading="lazy">
+                    {% endif %}
+                    <span class="service-logo-fallback{% if preset.logo_static or preset.logo_url %} d-none{% endif %}">{{ preset.name|first|upper }}</span>
+                    <strong>{{ preset.name }}</strong>
+                </div>
+                <a class="btn btn-light btn-sm w-100" href="{% url 'finanzas:subscription_create' %}?preset={{ preset.key }}">{% trans "Agregar" %}</a>
+            </article>
+        {% endfor %}
+    </div>
+</section>
 {% endif %}
 
 <section class="panel">
     <div class="panel-header">
         <div>
-            <h2>{% if lang_code|slice:':2' == 'en' %}Private insurance{% else %}Seguros privados{% endif %}</h2>
-            <p>{% if lang_code|slice:':2' == 'en' %}Section for life insurance and personal coverage.{% else %}Apartado para seguro de vida y coberturas personales.{% endif %}</p>
+            <h2>{% trans "Seguros privados" %}</h2>
+            <p>{% trans "Apartado para seguro de vida y coberturas personales." %}</p>
         </div>
     </div>
     <div class="insurance-grid">
         <article class="insurance-card">
-            <strong><span class="section-badge">VP</span> {% if lang_code|slice:':2' == 'en' %}Private life insurance{% else %}Seguro de vida privado{% endif %}</strong>
-            <span>{% if lang_code|slice:':2' == 'en' %}Family protection and capital coverage in case of unforeseen events.{% else %}Protecci&oacute;n familiar y capital en caso de imprevistos.{% endif %}</span>
-            <a class="btn btn-light btn-sm" href="{% url 'finanzas:subscription_create' %}?preset=segurovida">{% if lang_code|slice:':2' == 'en' %}Add{% else %}Agregar{% endif %}</a>
+            <strong><span class="section-badge">VP</span> {% trans "Seguro de vida privado" %}</strong>
+            <span>{% trans "Protección familiar y capital en caso de imprevistos." %}</span>
+            <a class="btn btn-light btn-sm" href="{% url 'finanzas:subscription_create' %}?preset=segurovida">{% trans "Agregar" %}</a>
         </article>
         <article class="insurance-card">
-            <strong><span class="section-badge">SP</span> {% if lang_code|slice:':2' == 'en' %}Private health insurance{% else %}Seguro de salud privado{% endif %}</strong>
-            <span>{% if lang_code|slice:':2' == 'en' %}Complements health coverage with a private hospital network.{% else %}Complementa cobertura m&eacute;dica con red de hospitales privados.{% endif %}</span>
-            <a class="btn btn-light btn-sm" href="{% url 'finanzas:subscription_create' %}?preset=segurosalud">{% if lang_code|slice:':2' == 'en' %}Add{% else %}Agregar{% endif %}</a>
+            <strong><span class="section-badge">SP</span> {% trans "Seguro de salud privado" %}</strong>
+            <span>{% trans "Complementa cobertura médica con red de hospitales privados." %}</span>
+            <a class="btn btn-light btn-sm" href="{% url 'finanzas:subscription_create' %}?preset=segurosalud">{% trans "Agregar" %}</a>
         </article>
         <article class="insurance-card">
-            <strong><span class="section-badge">IP</span> {% if lang_code|slice:':2' == 'en' %}Income protection{% else %}Seguro de ingreso{% endif %}</strong>
-            <span>{% if lang_code|slice:':2' == 'en' %}Support for work disability or income loss.{% else %}Respaldo ante incapacidad laboral o p&eacute;rdida de ingresos.{% endif %}</span>
-            <a class="btn btn-light btn-sm" href="{% url 'finanzas:subscription_create' %}?preset=seguroingreso">{% if lang_code|slice:':2' == 'en' %}Add{% else %}Agregar{% endif %}</a>
+            <strong><span class="section-badge">IP</span> {% trans "Seguro de ingreso" %}</strong>
+            <span>{% trans "Respaldo ante incapacidad laboral o pérdida de ingresos." %}</span>
+            <a class="btn btn-light btn-sm" href="{% url 'finanzas:subscription_create' %}?preset=seguroingreso">{% trans "Agregar" %}</a>
         </article>
     </div>
 </section>
@@ -118,21 +118,21 @@
         <table class="table data-table align-middle">
             <thead>
             <tr>
-                <th>{% if lang_code|slice:':2' == 'en' %}Service{% else %}Servicio{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Method{% else %}M&eacute;todo{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Category{% else %}Categor&iacute;a{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Frequency{% else %}Frecuencia{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Next charge{% else %}Pr&oacute;ximo cobro{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Amount{% else %}Monto{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Status{% else %}Estado{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Last run{% else %}&Uacute;ltima ejecuci&oacute;n{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}</th>
+                <th>{% trans "Servicio" %}</th>
+                <th>{% trans "Método" %}</th>
+                <th>{% trans "Categoría" %}</th>
+                <th>{% trans "Frecuencia" %}</th>
+                <th>{% trans "Próximo cobro" %}</th>
+                <th>{% trans "Monto" %}</th>
+                <th>{% trans "Estado" %}</th>
+                <th>{% trans "Última ejecución" %}</th>
+                <th>{% trans "Acciones" %}</th>
             </tr>
             </thead>
             <tbody>
             {% for row in subscription_rows %}
                 <tr>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Service{% else %}Servicio{% endif %}">
+                    <td data-label="{% trans 'Servicio' %}">
                         {% if row.logo_static %}
                             <img class="service-logo" src="{% static row.logo_static %}" alt="{{ row.item.name }}" loading="lazy">
                         {% elif row.logo_url %}
@@ -141,13 +141,13 @@
                         <span class="service-icon{% if not row.logo_static and not row.logo_url %} service-icon-fallback{% endif %}{% if row.logo_static or row.logo_url %} d-none{% endif %}">{{ row.icon }}</span>
                         {{ row.item.name }}
                     </td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Method{% else %}M&eacute;todo{% endif %}">{{ row.item.account.name }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Category{% else %}Categor&iacute;a{% endif %}">{{ row.item.category.name|default:"-" }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Frequency{% else %}Frecuencia{% endif %}"><span class="table-chip">{{ row.item.frequency_label_ui }}</span></td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Next charge{% else %}Pr&oacute;ximo cobro{% endif %}">{{ row.item.next_due_date }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Amount{% else %}Monto{% endif %}" class="table-amount">${{ row.item.amount|floatformat:2 }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Status{% else %}Estado{% endif %}">{% if row.item.is_active %}<span class="status-dot"></span>{{ row.item.active_label_ui }}{% else %}{{ row.item.inactive_label_ui }}{% endif %}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Last run{% else %}&Uacute;ltima ejecuci&oacute;n{% endif %}">
+                    <td data-label="{% trans 'Método' %}">{{ row.item.account.name }}</td>
+                    <td data-label="{% trans 'Categoría' %}">{{ row.item.category.name|default:"-" }}</td>
+                    <td data-label="{% trans 'Frecuencia' %}"><span class="table-chip">{{ row.item.frequency_label_ui }}</span></td>
+                    <td data-label="{% trans 'Próximo cobro' %}">{{ row.item.next_due_date }}</td>
+                    <td data-label="{% trans 'Monto' %}" class="table-amount">${{ row.item.amount|floatformat:2 }}</td>
+                    <td data-label="{% trans 'Estado' %}">{% if row.item.is_active %}<span class="status-dot"></span>{{ row.item.active_label_ui }}{% else %}{% trans "Inactiva" %}{% endif %}</td>
+                    <td data-label="{% trans 'Última ejecución' %}">
                         {% if row.item.last_execution_at %}
                             {{ row.item.last_execution_at|date:"Y-m-d H:i" }}
                             {% if row.item.last_execution_status %}
@@ -157,17 +157,16 @@
                             -
                         {% endif %}
                     </td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}" class="table-actions">
-                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:subscription_edit' row.item.id %}">{% if lang_code|slice:':2' == 'en' %}Edit{% else %}Editar{% endif %}</a>
-                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:subscription_delete' row.item.id %}">{% if lang_code|slice:':2' == 'en' %}Delete{% else %}Eliminar{% endif %}</a>
+                    <td data-label="{% trans 'Acciones' %}" class="table-actions">
+                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:subscription_edit' row.item.id %}">{% trans "Editar" %}</a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:subscription_delete' row.item.id %}">{% trans "Eliminar" %}</a>
                     </td>
                 </tr>
             {% empty %}
-                <tr><td colspan="9" class="empty-state">{% if lang_code|slice:':2' == 'en' %}No subscriptions registered.{% else %}No hay suscripciones registradas.{% endif %}</td></tr>
+                <tr><td colspan="9" class="empty-state">{% trans "No hay suscripciones registradas." %}</td></tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
 </section>
-{% endwith %}
 {% endblock %}

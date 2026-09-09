@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Integraciones · Moneta MCP" %}{% endblock %}
+{% block section %}{% trans "Configuración" %}{% endblock %}
+{% block content %}
+{% load i18n %}
+<section class="page-heading">
+    <div>
+        <h1>{% trans "Integraciones" %} · {% trans "Moneta MCP" %}</h1>
+        <p>{% trans "Concede a un agente compatible con MCP acceso de solo lectura o de borradores a tus finanzas. Ningún token puede aprobar movimientos ni mover saldos." %}</p>
+    </div>
+</section>
+
+{% if revealed %}
+<div class="alert alert-warning" role="alert">
+    <p class="mb-1"><strong>{% trans "Copia este token ahora." %}</strong>
+       {% trans "No se volverá a mostrar." %}</p>
+    <code style="word-break:break-all;">{{ revealed.raw }}</code>
+    <p class="form-text mb-0">{% trans "Prefijo" %}: {{ revealed.prefix }} ·
+       {% trans "Scopes" %}: {{ revealed.scopes|join:", " }}</p>
+</div>
+{% endif %}
+
+<section class="card p-3 mb-4" style="max-width:760px;">
+    <h2 class="h5">{% trans "Generar token" %}</h2>
+    <form method="post" action="{% url 'integrations:mcp_token_create' %}">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="id_name" class="form-label">{% trans "Nombre" %}</label>
+            <input type="text" id="id_name" name="name" class="form-control" maxlength="100"
+                   placeholder="{% trans 'Claude Desktop' %}" required>
+        </div>
+        <fieldset class="mb-3">
+            <legend class="form-label">{% trans "Permisos" %}</legend>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="scopes" value="read"
+                       id="id_scope_read" checked>
+                <label class="form-check-label" for="id_scope_read">
+                    {% trans "Lectura (read): resúmenes, cuentas, transacciones, categorías…" %}
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="scopes" value="draft"
+                       id="id_scope_draft">
+                <label class="form-check-label" for="id_scope_draft">
+                    {% trans "Borradores (draft): además crear lotes y borradores para revisión humana." %}
+                </label>
+            </div>
+        </fieldset>
+        <button type="submit" class="btn btn-success">{% trans "Generar token" %}</button>
+    </form>
+</section>
+
+<h2 class="h5">{% trans "Tokens" %}</h2>
+{% if tokens %}
+<div class="table-responsive">
+    <table class="table align-middle">
+        <caption class="visually-hidden">{% trans "Tokens MCP del usuario" %}</caption>
+        <thead>
+            <tr>
+                <th scope="col">{% trans "Nombre" %}</th>
+                <th scope="col">{% trans "Prefijo" %}</th>
+                <th scope="col">{% trans "Scopes" %}</th>
+                <th scope="col">{% trans "Creado" %}</th>
+                <th scope="col">{% trans "Último uso" %}</th>
+                <th scope="col">{% trans "Estado" %}</th>
+                <th scope="col">{% trans "Acciones" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in tokens %}
+            <tr>
+                <td>{{ t.name }}</td>
+                <td><code>{{ t.token_prefix }}…</code></td>
+                <td>{{ t.scope_list|join:", " }}</td>
+                <td>{{ t.created_at|date:"Y-m-d H:i" }}</td>
+                <td>{{ t.last_used_at|date:"Y-m-d H:i"|default:"—" }}</td>
+                <td>
+                    {% if t.revoked_at %}<span class="badge bg-danger">{% trans "Revocado" %}</span>
+                    {% elif t.enabled %}<span class="badge bg-success">{% trans "Activo" %}</span>
+                    {% else %}<span class="badge bg-secondary">{% trans "Deshabilitado" %}</span>{% endif %}
+                </td>
+                <td>
+                    {% if not t.revoked_at %}
+                    <div class="d-flex gap-1">
+                        <form method="post" action="{% url 'integrations:mcp_token_toggle' t.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-light">
+                                {% if t.enabled %}{% trans "Deshabilitar" %}{% else %}{% trans "Habilitar" %}{% endif %}
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'integrations:mcp_token_regenerate' t.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">{% trans "Regenerar" %}</button>
+                        </form>
+                        <form method="post" action="{% url 'integrations:mcp_token_revoke' t.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">{% trans "Revocar" %}</button>
+                        </form>
+                    </div>
+                    {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-muted">{% trans "Todavía no has generado ningún token." %}</p>
+{% endif %}
+
+<section class="card p-3 mt-4" style="max-width:760px;">
+    <h2 class="h5">{% trans "Instrucciones de conexión" %}</h2>
+    <p>{% trans "Transporte stdio (local):" %}</p>
+    <pre><code>MONETA_MCP_TOKEN=&lt;tu-token&gt; {{ stdio_command }}</code></pre>
+    <p>{% trans "Transporte Streamable HTTP:" %}</p>
+    <pre><code>POST {{ http_endpoint }}
+Authorization: Bearer &lt;tu-token&gt;
+Content-Type: application/json</code></pre>
+    <p class="form-text">{% trans "Enlaza el endpoint HTTP solo a 127.0.0.1 salvo que uses un proxy autenticado." %}</p>
+</section>
+{% endblock %}

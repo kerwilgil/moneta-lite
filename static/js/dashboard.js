@@ -82,6 +82,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const surface = cssVar("--surface");
         const warning = cssVar("--warning");
 
+        // Populate tabular fallback for accessibility/no-JS
+        const tableBody = document.getElementById("cashFlowTableBody");
+        if (tableBody && window.MonetaCurrency) {
+            tableBody.innerHTML = labels.map((label, i) =>
+                `<tr><th scope="row">${label}</th><td>${window.MonetaCurrency.format(values[i] || 0)}</td></tr>`
+            ).join("");
+        }
+
         cashFlowChart = new Chart(canvas, {
             type: "bar",
             data: {
@@ -110,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         padding: 12,
                         displayColors: false,
                         callbacks: {
-                            label: (context) => `$${Number(context.parsed.y || 0).toFixed(2)}`,
+                            label: (context) => window.MonetaCurrency ? window.MonetaCurrency.format(context.parsed.y || 0) : `$${Number(context.parsed.y || 0).toFixed(2)}`,
                         },
                     },
                 },
@@ -125,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         border: { display: false },
                         ticks: {
                             color: muted,
-                            callback: (value) => `$${Number(value).toLocaleString()}`,
+                            callback: (value) => window.MonetaCurrency ? window.MonetaCurrency.formatPlain(value) : `$${Number(value).toLocaleString()}`,
                         },
                     },
                 },

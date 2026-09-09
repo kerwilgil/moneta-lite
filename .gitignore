@@ -25,3 +25,6 @@ image/
 /5.png
 /6.png
 *.zip
+
+# recovery/scratch
+.tmp/

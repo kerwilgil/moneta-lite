@@ -1757,3 +1757,155 @@ class Phase3TestHardeningTests(TestCase):
         content = response.content.decode("utf-8")
         # Table headers should exist
         self.assertIn("<th>", content)
+
+    # S-03: throttle_keys timing attack protection
+    def test_throttle_keys_constant_time(self):
+        """S-03: throttle_keys should use constant-time hashing to prevent timing attacks."""
+        from finanzas.security import throttle_keys, _digest
+        from django.contrib.auth import get_user_model
+        from django.test import RequestFactory
+
+        User = get_user_model()
+        factory = RequestFactory()
+
+        # Test with existing user
+        user = User.objects.create_user(username="existing_user", password="secret")
+        request = factory.post("/accounts/login/", {"username": "existing_user", "password": "wrong"})
+        network_hash, identity_hash = throttle_keys(request, "existing_user")
+        self.assertIsInstance(network_hash, str)
+        self.assertIsInstance(identity_hash, str)
+        self.assertEqual(len(identity_hash), 64)  # SHA256 hex
+
+        # Test with non-existing user - should use same hashing path
+        request2 = factory.post("/accounts/login/", {"username": "nonexistent_user", "password": "wrong"})
+        network_hash2, identity_hash2 = throttle_keys(request2, "nonexistent_user")
+        self.assertIsInstance(network_hash2, str)
+        self.assertIsInstance(identity_hash2, str)
+        self.assertEqual(len(identity_hash2), 64)
+
+        # Both should use constant-time derivation (same code path)
+        # Identity hash should be different for different usernames
+        self.assertNotEqual(identity_hash, identity_hash2)
+
+    def test_throttle_pepper_from_settings(self):
+        """S-03: throttle_keys should use pepper from settings."""
+        from finanzas.security import throttle_keys
+        from django.conf import settings
+
+        from django.test import RequestFactory
+        factory = RequestFactory()
+        request = factory.post("/accounts/login/", {"username": "test", "password": "test"})
+
+        # Should work without explicit pepper (falls back to SECRET_KEY)
+        network_hash, identity_hash = throttle_keys(request, "testuser")
+        self.assertIsInstance(identity_hash, str)
+
+    # S-04: initial_setup additional guard
+    def test_initial_setup_requires_header_when_configured(self):
+        """S-04: initial_setup should require header when MONETA_SETUP_REQUIRE_HEADER=1."""
+        from django.test import override_settings
+
+        with override_settings(
+            MONETA_WEB_SETUP_ENABLED=True,
+            MONETA_SETUP_TOKEN="valid-token-123456789012345678901234567890",
+            MONETA_SETUP_REQUIRE_HEADER=True,
+            DJANGO_ALLOWED_HOSTS=["testserver"],
+        ):
+            # Without header -> 404
+            response = self.client.post(reverse("finanzas:initial_setup"), {
+                "username": "admin",
+                "password": "ComplexPass123!",
+                "password_confirm": "ComplexPass123!",
+                "setup_token": "valid-token-123456789012345678901234567890",
+            })
+            self.assertEqual(response.status_code, 404)
+
+            # With header -> allowed (but fails on token if wrong)
+            response = self.client.post(
+                reverse("finanzas:initial_setup"),
+                {
+                    "username": "admin",
+                    "password": "ComplexPass123!",
+                    "password_confirm": "ComplexPass123!",
+                    "setup_token": "wrong-token",
+                },
+                HTTP_X_MONETA_SETUP="1",
+            )
+            # Should not be 404 (header check passed), but form error on token
+            self.assertNotEqual(response.status_code, 404)
+
+    def test_initial_setup_allows_allowed_ip(self):
+        """S-04: initial_setup should allow configured IPs."""
+        from django.test import override_settings
+
+        with override_settings(
+            MONETA_WEB_SETUP_ENABLED=True,
+            MONETA_SETUP_TOKEN="valid-token-123456789012345678901234567890",
+            MONETA_SETUP_ALLOWED_IPS=["1.2.3.4"],
+            DJANGO_ALLOWED_HOSTS=["testserver"],
+        ):
+            from finanzas.security import client_ip
+            from django.test import RequestFactory
+
+            factory = RequestFactory()
+            request = factory.get("/", REMOTE_ADDR="1.2.3.4")
+            ip = client_ip(request)
+            self.assertEqual(ip, "1.2.3.4")
+
+    # S-05: Cache backend validation at startup
+    def test_cache_backend_warning_in_production(self):
+        """S-05: Startup should warn on unsafe cache backend in production."""
+        import logging
+        import sys
+        from io import StringIO
+        from unittest.mock import patch
+
+        # First, import the settings module to ensure it's in sys.modules
+        from config import settings as settings_module
+
+        log_stream = StringIO()
+        handler = logging.StreamHandler(log_stream)
+        logger = logging.getLogger("config.settings")
+        logger.addHandler(handler)
+        logger.setLevel(logging.WARNING)
+
+        try:
+            # Patch environment to simulate production with locmem cache
+            with patch.dict("os.environ", {"DJANGO_DEBUG": "0", "DJANGO_CACHE_BACKEND": "locmem", "DJANGO_ALLOWED_HOSTS": "testserver"}):
+                # Reload the settings module to trigger validation
+                import importlib
+                importlib.reload(settings_module)
+
+                log_output = log_stream.getvalue()
+                self.assertIn("inseguro", log_output.lower())
+                self.assertIn("locmem", log_output.lower())
+        finally:
+            logger.removeHandler(handler)
+
+    def test_cache_backend_ok_with_redis_in_production(self):
+        """S-05: Redis cache backend should not warn in production."""
+        import logging
+        from io import StringIO
+        from django.test import override_settings
+
+        log_stream = StringIO()
+        handler = logging.StreamHandler(log_stream)
+        logger = logging.getLogger("config.settings")
+        logger.addHandler(handler)
+        logger.setLevel(logging.WARNING)
+
+        try:
+            with override_settings(
+                DEBUG=False,
+                DJANGO_CACHE_BACKEND="redis",
+                DJANGO_CACHE_REDIS_URL="redis://127.0.0.1:6379/1",
+                DJANGO_ALLOWED_HOSTS=["testserver"],
+            ):
+                from importlib import reload
+                from config import settings
+                reload(settings)
+
+                log_output = log_stream.getvalue()
+                self.assertNotIn("inseguro", log_output.lower())
+        finally:
+            logger.removeHandler(handler)

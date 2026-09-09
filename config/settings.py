@@ -88,11 +88,13 @@ MONETA_LOGIN_MAX_ATTEMPTS = env_int("MONETA_LOGIN_MAX_ATTEMPTS", 10)
 MONETA_LOGIN_LOCKOUT_SECONDS = env_int("MONETA_LOGIN_LOCKOUT_SECONDS", 900)
 MONETA_RECURRING_BATCH_SIZE = env_int("MONETA_RECURRING_BATCH_SIZE", 100)
 MONETA_RECURRING_MAX_CYCLES = env_int("MONETA_RECURRING_MAX_CYCLES", 12)
+MONETA_RECURRING_MAX_TOTAL_TRANSACTIONS = env_int("MONETA_RECURRING_MAX_TOTAL_TRANSACTIONS", 200)
 for setting_name, setting_value in (
     ("MONETA_LOGIN_MAX_ATTEMPTS", MONETA_LOGIN_MAX_ATTEMPTS),
     ("MONETA_LOGIN_LOCKOUT_SECONDS", MONETA_LOGIN_LOCKOUT_SECONDS),
     ("MONETA_RECURRING_BATCH_SIZE", MONETA_RECURRING_BATCH_SIZE),
     ("MONETA_RECURRING_MAX_CYCLES", MONETA_RECURRING_MAX_CYCLES),
+    ("MONETA_RECURRING_MAX_TOTAL_TRANSACTIONS", MONETA_RECURRING_MAX_TOTAL_TRANSACTIONS),
 ):
     if setting_value < 1:
         raise ImproperlyConfigured(f"{setting_name} debe ser mayor que cero.")
@@ -160,6 +162,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "es-pa"
 LANGUAGES = [
+    ("es-pa", "Español (Panamá)"),
     ("es", "Español"),
     ("en", "English"),
 ]
@@ -240,3 +243,19 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = env_int("DJANGO_SECURE_HSTS_SECONDS", 31536000)
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+
+    # Validate cache backend in production
+    from django.core.cache import caches
+    cache_backend = caches["default"].__class__.__module__
+    unsafe_backends = (
+        "django.core.cache.backends.locmem",
+        "django.core.cache.backends.filebased",
+    )
+    if any(unsafe in cache_backend for unsafe in unsafe_backends):
+        import logging
+        logging.getLogger("config.settings").warning(
+            "Produccion detectada con cache backend inseguro (%s). "
+            "En entornos multi-worker usar redis o db para evitar "
+            "inconsistencias de sesiones/throttle.",
+            cache_backend
+        )

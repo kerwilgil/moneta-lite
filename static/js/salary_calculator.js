@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return Number.isNaN(parsed) ? 0 : Math.max(parsed, 0);
     };
 
-    const formatMoney = (value) => `$${value.toFixed(2)}`;
+    const formatMoney = (value) => window.MonetaCurrency ? window.MonetaCurrency.format(value) : `$${value.toFixed(2)}`;
 
     const appendText = (parent, tagName, text, className = "") => {
         const element = document.createElement(tagName);

@@ -1,72 +1,72 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Transactions{% else %}Movimientos{% endif %}{% endblock %}
-{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Transactions{% else %}Movimientos{% endif %}{% endblock %}
+{% block title %}{% trans "Movimientos" %}{% endblock %}
+{% block section %}{% trans "Movimientos" %}{% endblock %}
 {% block content %}
-{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+{% load i18n %}
 <section class="page-heading">
     <div>
-        <h1>{% if lang_code|slice:':2' == 'en' %}Transactions{% else %}Movimientos{% endif %}</h1>
-        <p>{% if lang_code|slice:':2' == 'en' %}Daily record of income, expenses, payments and collections.{% else %}Registro diario de ingresos, gastos, pagos y cobros.{% endif %}</p>
+        <h1>{% trans "Movimientos" %}</h1>
+        <p>{% trans "Registro diario de ingresos, gastos, pagos y cobros." %}</p>
     </div>
     <div class="heading-actions">
-        <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_transactions_csv' %}">{% if lang_code|slice:':2' == 'en' %}Export CSV{% else %}Exportar CSV{% endif %}</a>
-        <a class="btn btn-light btn-sm" href="{% url 'finanzas:category_create' %}">{% if lang_code|slice:':2' == 'en' %}New category{% else %}Nueva categor&iacute;a{% endif %}</a>
-        <a class="btn btn-success btn-sm" href="{% url 'finanzas:transaction_create' %}">{% if lang_code|slice:':2' == 'en' %}New transaction{% else %}Nuevo movimiento{% endif %}</a>
+        <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_transactions_csv' %}">{% trans "Exportar CSV" %}</a>
+        <a class="btn btn-light btn-sm" href="{% url 'finanzas:category_create' %}">{% trans "Nueva categoría" %}</a>
+        <a class="btn btn-success btn-sm" href="{% url 'finanzas:transaction_create' %}">{% trans "Nuevo movimiento" %}</a>
     </div>
 </section>
 
 <section class="mini-metric-grid">
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Income and collections{% else %}Ingresos y cobros{% endif %}</span>
+        <span>{% trans "Ingresos y cobros" %}</span>
         <strong>${{ summary_income|floatformat:2 }}</strong>
     </article>
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Expenses{% else %}Gastos{% endif %}</span>
+        <span>{% trans "Gastos" %}</span>
         <strong>${{ summary_expense|floatformat:2 }}</strong>
     </article>
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Card payments{% else %}Pagos de tarjeta{% endif %}</span>
+        <span>{% trans "Pagos de tarjeta" %}</span>
         <strong>${{ summary_card_payment|floatformat:2 }}</strong>
     </article>
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Net flow{% else %}Flujo neto{% endif %}</span>
+        <span>{% trans "Flujo neto" %}</span>
         <strong>${{ summary_cash_flow|floatformat:2 }}</strong>
     </article>
 </section>
 
 <section class="panel compact-panel">
     <form method="get" class="filters-grid">
-        <input class="form-control" type="search" name="q" aria-label="{% if lang_code|slice:':2' == 'en' %}Search description or contact{% else %}Buscar descripcion o contacto{% endif %}" placeholder="{% if lang_code|slice:':2' == 'en' %}Search description or contact{% else %}Buscar descripci&oacute;n o contacto{% endif %}" value="{{ filters.q }}">
-        <select class="form-select" name="transaction_type" aria-label="{% if lang_code|slice:':2' == 'en' %}Transaction type{% else %}Tipo de movimiento{% endif %}">
-            <option value="">{% if lang_code|slice:':2' == 'en' %}All types{% else %}Todos los tipos{% endif %}</option>
+        <input class="form-control" type="search" name="q" aria-label="{% trans 'Buscar descripción o contacto' %}" placeholder="{% trans 'Buscar descripción o contacto' %}" value="{{ filters.q }}">
+        <select class="form-select" name="transaction_type" aria-label="{% trans 'Tipo de movimiento' %}">
+            <option value="">{% trans "Todos los tipos" %}</option>
             {% for key, label in type_choices %}
                 <option value="{{ key }}" {% if filters.transaction_type == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-        <select class="form-select" name="status" aria-label="{% if lang_code|slice:':2' == 'en' %}Transaction status{% else %}Estado del movimiento{% endif %}">
-            <option value="">{% if lang_code|slice:':2' == 'en' %}All statuses{% else %}Todos los estados{% endif %}</option>
+        <select class="form-select" name="status" aria-label="{% trans 'Estado del movimiento' %}">
+            <option value="">{% trans "Todos los estados" %}</option>
             {% for key, label in status_choices %}
                 <option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-        <select class="form-select" name="account" aria-label="{% if lang_code|slice:':2' == 'en' %}Account{% else %}Cuenta{% endif %}">
-            <option value="">{% if lang_code|slice:':2' == 'en' %}All accounts{% else %}Todas las cuentas{% endif %}</option>
+        <select class="form-select" name="account" aria-label="{% trans 'Cuenta' %}">
+            <option value="">{% trans "Todas las cuentas" %}</option>
             {% for account in accounts %}
                 <option value="{{ account.id }}" {% if filters.account == account.id|stringformat:"s" %}selected{% endif %}>{{ account.name }}</option>
             {% endfor %}
         </select>
-        <select class="form-select" name="category" aria-label="{% if lang_code|slice:':2' == 'en' %}Category{% else %}Categoria{% endif %}">
-            <option value="">{% if lang_code|slice:':2' == 'en' %}All categories{% else %}Todas las categor&iacute;as{% endif %}</option>
+        <select class="form-select" name="category" aria-label="{% trans 'Categoría' %}">
+            <option value="">{% trans "Todas las categorías" %}</option>
             {% for category in categories %}
                 <option value="{{ category.id }}" {% if filters.category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
             {% endfor %}
         </select>
-        <input class="form-control" type="date" name="date_from" aria-label="{% if lang_code|slice:':2' == 'en' %}From date{% else %}Fecha desde{% endif %}" value="{{ filters.date_from }}">
-        <input class="form-control" type="date" name="date_to" aria-label="{% if lang_code|slice:':2' == 'en' %}To date{% else %}Fecha hasta{% endif %}" value="{{ filters.date_to }}">
+        <input class="form-control" type="date" name="date_from" aria-label="{% trans 'Fecha desde' %}" value="{{ filters.date_from }}">
+        <input class="form-control" type="date" name="date_to" aria-label="{% trans 'Fecha hasta' %}" value="{{ filters.date_to }}">
         <div class="filters-actions">
-            <button class="btn btn-success btn-sm" type="submit">{% if lang_code|slice:':2' == 'en' %}Filter{% else %}Filtrar{% endif %}</button>
-            <a class="btn btn-light btn-sm" href="{% url 'finanzas:transaction_list' %}">{% if lang_code|slice:':2' == 'en' %}Clear{% else %}Limpiar{% endif %}</a>
+            <button class="btn btn-success btn-sm" type="submit">{% trans "Filtrar" %}</button>
+            <a class="btn btn-light btn-sm" href="{% url 'finanzas:transaction_list' %}">{% trans "Limpiar" %}</a>
         </div>
     </form>
 </section>
@@ -76,43 +76,42 @@
         <table class="table data-table align-middle">
             <thead>
             <tr>
-                <th>{% if lang_code|slice:':2' == 'en' %}Date{% else %}Fecha{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Description{% else %}Descripci&oacute;n{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Type{% else %}Tipo{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Account{% else %}Cuenta{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Destination / Card{% else %}Destino / Tarjeta{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Category{% else %}Categor&iacute;a{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Amount{% else %}Monto{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}</th>
+                <th>{% trans "Fecha" %}</th>
+                <th>{% trans "Descripción" %}</th>
+                <th>{% trans "Tipo" %}</th>
+                <th>{% trans "Cuenta" %}</th>
+                <th>{% trans "Destino / Tarjeta" %}</th>
+                <th>{% trans "Categoría" %}</th>
+                <th>{% trans "Monto" %}</th>
+                <th>{% trans "Acciones" %}</th>
             </tr>
             </thead>
             <tbody>
             {% for transaction in transactions %}
                 <tr>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Date{% else %}Fecha{% endif %}">{{ transaction.date }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Description{% else %}Descripci&oacute;n{% endif %}">{{ transaction.description }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Type{% else %}Tipo{% endif %}"><span class="table-chip">{{ transaction.transaction_type_label_ui }}</span></td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Account{% else %}Cuenta{% endif %}">{{ transaction.account.name }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Destination / Card{% else %}Destino / Tarjeta{% endif %}">
+                    <td data-label="{% trans 'Fecha' %}">{{ transaction.date }}</td>
+                    <td data-label="{% trans 'Descripción' %}">{{ transaction.description }}</td>
+                    <td data-label="{% trans 'Tipo' %}"><span class="table-chip">{{ transaction.transaction_type_label_ui }}</span></td>
+                    <td data-label="{% trans 'Cuenta' %}">{{ transaction.account.name }}</td>
+                    <td data-label="{% trans 'Destino / Tarjeta' %}">
                         {% if transaction.destination_account %}{{ transaction.destination_account.name }}{% endif %}
                         {% if transaction.related_credit_card %}{{ transaction.related_credit_card.account.name }}{% endif %}
                         {% if not transaction.destination_account and not transaction.related_credit_card %}-{% endif %}
                     </td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Category{% else %}Categor&iacute;a{% endif %}">{{ transaction.category.name|default:"-" }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Amount{% else %}Monto{% endif %}" class="table-amount">${{ transaction.amount|floatformat:2 }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}" class="table-actions">
-                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:transaction_edit' transaction.id %}">{% if lang_code|slice:':2' == 'en' %}Edit{% else %}Editar{% endif %}</a>
-                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:transaction_delete' transaction.id %}">{% if lang_code|slice:':2' == 'en' %}Delete{% else %}Eliminar{% endif %}</a>
+                    <td data-label="{% trans 'Categoría' %}">{{ transaction.category.name|default:"-" }}</td>
+                    <td data-label="{% trans 'Monto' %}" class="table-amount">${{ transaction.amount|floatformat:2 }}</td>
+                    <td data-label="{% trans 'Acciones' %}" class="table-actions">
+                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:transaction_edit' transaction.id %}">{% trans "Editar" %}</a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:transaction_delete' transaction.id %}">{% trans "Eliminar" %}</a>
                     </td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="8" class="empty-state">{% if lang_code|slice:':2' == 'en' %}Create your first transaction.{% else %}Registra tu primer movimiento.{% endif %}</td>
+                    <td colspan="8" class="empty-state">{% trans "Registra tu primer movimiento." %}</td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
 </section>
-{% endwith %}
 {% endblock %}

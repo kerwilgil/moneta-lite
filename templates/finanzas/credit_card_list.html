@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Cards{% else %}Tarjetas{% endif %}{% endblock %}
-{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Cards{% else %}Tarjetas{% endif %}{% endblock %}
+{% block title %}{% trans "Tarjetas" %}{% endblock %}
+{% block section %}{% trans "Tarjetas" %}{% endblock %}
 {% block content %}
-{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+{% load i18n %}
 <section class="page-heading">
     <div>
-        <h1>{% if lang_code|slice:':2' == 'en' %}Credit cards{% else %}Tarjetas de credito{% endif %}</h1>
-        <p>{% if lang_code|slice:':2' == 'en' %}Statement balance, minimum payment, global limit, available credit and monthly charges.{% else %}Saldo de estado, pago minimo, limite global, disponible y cargos mensuales.{% endif %}</p>
+        <h1>{% trans "Tarjetas de crédito" %}</h1>
+        <p>{% trans "Saldo de estado, pago mínimo, límite global, disponible y cargos mensuales." %}</p>
     </div>
-    <a class="btn btn-success btn-sm" href="{% url 'finanzas:credit_card_create' %}">{% if lang_code|slice:':2' == 'en' %}New card{% else %}Nueva tarjeta{% endif %}</a>
+    <a class="btn btn-success btn-sm" href="{% url 'finanzas:credit_card_create' %}">{% trans "Nueva tarjeta" %}</a>
 </section>
 
 <section class="credit-card-stack">
@@ -18,31 +18,31 @@
             <div class="credit-card-panel-head">
                 <div>
                     <h2>{{ card.account.name }}</h2>
-                    <span>{% if card.statement_number %}Estado {{ card.statement_number }} · {% endif %}{{ card.utilization_percent }}% {% if lang_code|slice:':2' == 'en' %}used{% else %}usado{% endif %} · {{ card.monthly_interest_percent }}% {% if lang_code|slice:':2' == 'en' %}monthly interest{% else %}interes mensual{% endif %} · FECI {% if card.feci_applies %}1%{% else %}0%{% endif %}</span>
+                    <span>{% if card.statement_number %}Estado {{ card.statement_number }} · {% endif %}{{ card.utilization_percent }}% {% trans "usado" %} · {{ card.monthly_interest_percent }}% {% trans "interés mensual" %} · FECI {% if card.feci_applies %}1%{% else %}0%{% endif %}</span>
                 </div>
                 <span class="metric-badge {% if card.available_credit < 0 %}warning{% else %}positive{% endif %}">
-                    {% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}: ${{ card.available_credit|floatformat:2 }}
+                    {% trans "Disponible" %}: ${{ card.available_credit|floatformat:2 }}
                 </span>
             </div>
             <div class="credit-card-metrics">
                 <div class="credit-card-metric">
-                    <span>{% if lang_code|slice:':2' == 'en' %}Global limit{% else %}Limite global{% endif %}</span>
+                    <span>{% trans "Límite global" %}</span>
                     <strong>${{ card.effective_limit|floatformat:2 }}</strong>
                 </div>
                 <div class="credit-card-metric">
-                    <span>{% if lang_code|slice:':2' == 'en' %}Global balance{% else %}Saldo global{% endif %}</span>
+                    <span>{% trans "Saldo global" %}</span>
                     <strong>${{ card.effective_balance|floatformat:2 }}</strong>
                 </div>
                 <div class="credit-card-metric">
-                    <span>{% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}</span>
+                    <span>{% trans "Disponible" %}</span>
                     <strong class="{% if card.available_credit < 0 %}budget-negative{% endif %}">${{ card.available_credit|floatformat:2 }}</strong>
                 </div>
                 <div class="credit-card-metric">
-                    <span>{% if lang_code|slice:':2' == 'en' %}Minimum payment{% else %}Pago minimo{% endif %}</span>
+                    <span>{% trans "Pago mínimo" %}</span>
                     <strong>${{ card.minimum_payment|floatformat:2 }}</strong>
                 </div>
                 <div class="credit-card-metric">
-                    <span>{% if lang_code|slice:':2' == 'en' %}Monthly charges{% else %}Cargos mensuales{% endif %}</span>
+                    <span>{% trans "Cargos mensuales" %}</span>
                     <strong>${{ card.monthly_finance_charges|floatformat:2 }}</strong>
                 </div>
             </div>
@@ -51,9 +51,9 @@
         <section class="panel">
             <div class="empty-state-rich">
                 <span class="empty-icon" aria-hidden="true">&#128179;</span>
-                <strong>{% if lang_code|slice:':2' == 'en' %}No cards yet{% else %}Sin tarjetas aun{% endif %}</strong>
-                <p>{% if lang_code|slice:':2' == 'en' %}Add a credit card to track limit, debt, available balance and payment recommendations.{% else %}Agrega una tarjeta para controlar limite, deuda, disponible y recomendaciones de pago.{% endif %}</p>
-                <a class="btn btn-success btn-sm" href="{% url 'finanzas:credit_card_create' %}">{% if lang_code|slice:':2' == 'en' %}Add card{% else %}Agregar tarjeta{% endif %}</a>
+                <strong>{% trans "Sin tarjetas aún" %}</strong>
+                <p>{% trans "Agrega una tarjeta para controlar límite, deuda, disponible y recomendaciones de pago." %}</p>
+                <a class="btn btn-success btn-sm" href="{% url 'finanzas:credit_card_create' %}">{% trans "Agregar tarjeta" %}</a>
             </div>
         </section>
     {% endfor %}
@@ -64,47 +64,46 @@
         <table class="table data-table align-middle">
             <thead>
             <tr>
-                <th>{% if lang_code|slice:':2' == 'en' %}Card{% else %}Tarjeta{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Statement{% else %}Estado{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Limit{% else %}Limite{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Balance{% else %}Saldo{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Annual / Monthly rate{% else %}Tasa anual / mensual{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Monthly interest{% else %}Interes mensual{% endif %}</th>
+                <th>{% trans "Tarjeta" %}</th>
+                <th>{% trans "Estado" %}</th>
+                <th>{% trans "Límite" %}</th>
+                <th>{% trans "Saldo" %}</th>
+                <th>{% trans "Disponible" %}</th>
+                <th>{% trans "Tasa anual / mensual" %}</th>
+                <th>{% trans "Interés mensual" %}</th>
                 <th>FECI</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Minimum payment{% else %}Pago minimo{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Cash payment{% else %}Pago contado{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Statement / Due{% else %}Corte / Vence{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}</th>
+                <th>{% trans "Pago mínimo" %}</th>
+                <th>{% trans "Pago contado" %}</th>
+                <th>{% trans "Corte / Vence" %}</th>
+                <th>{% trans "Acciones" %}</th>
             </tr>
             </thead>
             <tbody>
             {% for card in cards %}
                 <tr>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Card{% else %}Tarjeta{% endif %}">{{ card.account.name }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Statement{% else %}Estado{% endif %}">{% if card.statement_number %}{{ card.statement_number }}{% else %}-{% endif %}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Limit{% else %}Limite{% endif %}" class="table-amount">${{ card.effective_limit|floatformat:2 }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Balance{% else %}Saldo{% endif %}" class="table-amount">${{ card.effective_balance|floatformat:2 }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Available{% else %}Disponible{% endif %}" class="table-amount {% if card.available_credit < 0 %}budget-negative{% endif %}">${{ card.available_credit|floatformat:2 }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Annual / Monthly rate{% else %}Tasa anual / mensual{% endif %}">{{ card.annual_interest_rate }}% / {{ card.monthly_interest_percent }}%</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Monthly interest{% else %}Interes mensual{% endif %}" class="table-amount">${{ card.monthly_interest_amount|floatformat:2 }}</td>
+                    <td data-label="{% trans 'Tarjeta' %}">{{ card.account.name }}</td>
+                    <td data-label="{% trans 'Estado' %}">{% if card.statement_number %}{{ card.statement_number }}{% else %}-{% endif %}</td>
+                    <td data-label="{% trans 'Límite' %}" class="table-amount">${{ card.effective_limit|floatformat:2 }}</td>
+                    <td data-label="{% trans 'Saldo' %}" class="table-amount">${{ card.effective_balance|floatformat:2 }}</td>
+                    <td data-label="{% trans 'Disponible' %}" class="table-amount {% if card.available_credit < 0 %}budget-negative{% endif %}">${{ card.available_credit|floatformat:2 }}</td>
+                    <td data-label="{% trans 'Tasa anual / mensual' %}">{{ card.annual_interest_rate }}% / {{ card.monthly_interest_percent }}%</td>
+                    <td data-label="{% trans 'Interés mensual' %}" class="table-amount">${{ card.monthly_interest_amount|floatformat:2 }}</td>
                     <td data-label="FECI" class="table-amount">${{ card.monthly_feci_amount|floatformat:2 }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Minimum payment{% else %}Pago minimo{% endif %}" class="table-amount">${{ card.minimum_payment|floatformat:2 }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Cash payment{% else %}Pago contado{% endif %}" class="table-amount">${{ card.cash_payment|floatformat:2 }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Statement / Due{% else %}Corte / Vence{% endif %}">{{ card.statement_day }} / {{ card.payment_due_day }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}" class="table-actions">
-                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:credit_card_edit' card.id %}">{% if lang_code|slice:':2' == 'en' %}Edit{% else %}Editar{% endif %}</a>
-                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:credit_card_delete' card.id %}">{% if lang_code|slice:':2' == 'en' %}Delete{% else %}Eliminar{% endif %}</a>
+                    <td data-label="{% trans 'Pago mínimo' %}" class="table-amount">${{ card.minimum_payment|floatformat:2 }}</td>
+                    <td data-label="{% trans 'Pago contado' %}" class="table-amount">${{ card.cash_payment|floatformat:2 }}</td>
+                    <td data-label="{% trans 'Corte / Vence' %}">{{ card.statement_day }} / {{ card.payment_due_day }}</td>
+                    <td data-label="{% trans 'Acciones' %}" class="table-actions">
+                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:credit_card_edit' card.id %}">{% trans "Editar" %}</a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:credit_card_delete' card.id %}">{% trans "Eliminar" %}</a>
                     </td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="11" class="empty-state">{% if lang_code|slice:':2' == 'en' %}Add a card to enable calculations.{% else %}Agrega una tarjeta para activar los calculos.{% endif %}</td>
+                    <td colspan="11" class="empty-state">{% trans "Agrega una tarjeta para activar los cálculos." %}</td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
 </section>
-{% endwith %}
 {% endblock %}
