@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load i18n static %}
+{% block title %}{% trans "Ayuda" %} · {{ product.name }}{% endblock %}
+{% block section %}{% trans "Ayuda" %}{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div>
+        <h1>{% trans "Centro de ayuda" %}</h1>
+        {% with app_name=product.name %}
+        <p>{% blocktrans %}Guía de uso de {{ app_name }}. Todo el contenido funciona sin conexión.{% endblocktrans %}</p>
+        {% endwith %}
+    </div>
+</section>
+
+<form class="help-search" role="search" onsubmit="return false;">
+    <label for="helpSearch" class="form-label">{% trans "Buscar en la ayuda" %}</label>
+    <input type="search" id="helpSearch" class="form-control" autocomplete="off"
+           placeholder="{% trans 'Escribe un tema: tarjetas, importar, token…' %}"
+           aria-describedby="helpSearchHint">
+    <p id="helpSearchHint" class="form-text" aria-live="polite">
+        <span data-help-count>{{ article_count }}</span> {% trans "artículos" %}
+    </p>
+</form>
+
+<div id="helpResults">
+{% for section, articles in groups %}
+    <section class="help-group" data-help-group>
+        <h2 class="h5 help-group-title">{{ section }}</h2>
+        <ul class="help-list">
+            {% for a in articles %}
+            <li class="help-item" data-help-item
+                data-title="{{ a.title|lower }}"
+                data-keywords="{% for k in a.keywords %}{{ k|lower }} {% endfor %}{{ a.summary|lower }}">
+                <a href="{% url 'help:help_article' a.slug %}">
+                    <strong>{{ a.title }}</strong>
+                    <span>{{ a.summary }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+{% endfor %}
+    <p class="help-empty" data-help-empty hidden>{% trans "No hay artículos que coincidan con tu búsqueda." %}</p>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/help.js' %}"></script>{% endblock %}

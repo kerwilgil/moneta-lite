@@ -2,51 +2,57 @@
 
 Estos valores se configuran en **Settings → General** del repositorio
 `kerwilgil/moneta-lite`. No se pueden fijar desde el código; esta lista es la
-recomendación curada para Phase 7 (GH-04).
+recomendación curada tras Phase 8.
 
 ## Description
 
-> Moneta Lite — self-hosted personal finance dashboard: accounts, transactions,
-> credit cards, subscriptions, invoices & reports. Bilingual (ES/EN), dark mode,
-> MCP-ready with a human-approval boundary. Django + Python.
+> Self-hosted personal finance manager: accounts, expenses, bills, credit cards,
+> subscriptions, reports, an Import Queue with deduplication and an MCP server
+> for AI agents. Human-approved. Bilingual (ES/EN). SQLite or PostgreSQL. Django.
+
+(≤ 350 caracteres; GitHub recorta a ~350.)
+
+## Website
+
+`https://github.com/kerwilgil/moneta-lite` (o la landing si existe).
 
 ## Topics (15)
 
 ```
 personal-finance
+personal-finance-manager
 finance-manager
+expense-tracker
 budget
+budgeting
 expenses
 income-tracking
+money-management
 django
 python
 self-hosted
 financial-dashboard
-open-source
-windows
-bilingual
-sqlite
-postgresql
 mcp
+ai-agents
 ```
 
 ### Justificación
 
 | Topic | Motivo |
 |-------|--------|
-| `personal-finance` / `finance-manager` | Categoría principal. |
-| `budget` / `expenses` / `income-tracking` | Módulos reales (presupuesto por categoría, movimientos, reportes de ingreso). |
-| `django` / `python` | Stack. |
+| `personal-finance`, `personal-finance-manager`, `finance-manager` | Categoría principal y sinónimos buscables. |
+| `expense-tracker`, `expenses`, `budget`, `budgeting` | Funciones reales (movimientos, presupuesto por categoría). |
+| `income-tracking` | Reportes de ingreso y flujo. |
+| `money-management`, `financial-dashboard` | Uso y UX principal. |
+| `django`, `python` | Stack. |
 | `self-hosted` | Modelo de despliegue. |
-| `financial-dashboard` | UX principal. |
-| `open-source` | Licencia MIT. |
-| `windows` | Soporte nativo (`start.bat` / `stop.bat`, guías PowerShell/CMD). |
-| `bilingual` | ES (`es-pa`, `es`) + EN. |
-| `sqlite` / `postgresql` | Backend por defecto / opción de producción. |
 | `mcp` | Servidor MCP `2026-07-28` incluido. |
+| `ai-agents` | Interoperabilidad con agentes (borradores, aprobación humana). |
 
-### Descartados (por ahora)
+### Descartados
 
-- `accounting` — el libro contable es un módulo **Pro**; no está en Lite.
-- `ai` — la base de IA viene deshabilitada por defecto; `mcp` describe mejor lo
-  que Lite realmente expone.
+- `accounting` — el libro contable es un módulo **Pro**; no está en Lite y puede
+  inducir a error.
+- `windows`, `sqlite`, `postgresql`, `bilingual` — ciertos pero de menor valor de
+  descubrimiento; se dejan fuera para no pasar de 15–20 topics. Se pueden añadir
+  si quedan huecos.

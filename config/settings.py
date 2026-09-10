@@ -47,6 +47,7 @@ if len(SECRET_KEY) < 50:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY debe tener al menos 50 caracteres.")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+APP_VERSION = "0.3.0"
 APP_EDITION = normalize_edition(os.getenv("SAAS_EDITION", "demo"))
 APP_FEATURES = edition_features(APP_EDITION)
 APP_NAME = os.getenv("SAAS_APP_NAME", "Moneta")

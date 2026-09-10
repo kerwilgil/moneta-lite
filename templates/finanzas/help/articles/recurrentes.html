@@ -1,0 +1,22 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "Pagos que se repiten en el tiempo (alquiler, cuotas, nómina) que Moneta puede convertir en movimientos automáticamente." %}</p>
+
+<h2>{% trans "Para qué sirve" %}</h2>
+<p>{% trans "Evitar registrar a mano lo que ocurre cada semana, quincena, mes, trimestre o año." %}</p>
+
+<h2>{% trans "Campos principales" %}</h2>
+<ul>
+    <li><strong>{% trans "Frecuencia" %}</strong> {% trans "y próxima fecha de vencimiento." %}</li>
+    <li><strong>{% trans "Cuenta, categoría e importe." %}</strong></li>
+    <li><strong>{% trans "Crear movimiento automático" %}</strong>: {% trans "si está activo, la ejecución genera el movimiento." %}</li>
+</ul>
+
+<h2>{% trans "Acciones disponibles" %}</h2>
+<ul>
+    <li>{% trans "Ejecutar los vencimientos pendientes desde la propia pantalla o por línea de comandos." %}</li>
+    <li>{% trans "La ejecución es idempotente y está acotada por lote para no crear cientos de movimientos de golpe." %}</li>
+</ul>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "Módulo de la edición Pro. La ejecución nunca duplica una ocurrencia ya creada para la misma fecha." %}</p>

@@ -26,6 +26,8 @@
         {% endif %}
     </div>
 </section>
+{% trans "Aquí ves el gasto recurrente en servicios y su proyección mensual. El apartado de seguros privados agrupa vida, salud e ingreso." as help_text %}
+{% include "finanzas/help/_help_button.html" with slug="suscripciones" text=help_text %}
 
 <section class="mini-metric-grid">
     <article class="mini-metric-card">

@@ -1,0 +1,23 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "Una cuenta representa un lugar donde tienes o debes dinero: banco, efectivo, ahorro, inversión, tarjeta, préstamo o capital." %}</p>
+
+<h2>{% trans "Para qué sirve" %}</h2>
+<p>{% trans "Toda operación mueve dinero entre cuentas. El balance de cada cuenta se deriva de sus movimientos." %}</p>
+
+<h2>{% trans "Campos principales" %}</h2>
+<ul>
+    <li><strong>{% trans "Tipo" %}</strong>: {% trans "determina cómo cuenta para activos, pasivos y capital." %}</li>
+    <li><strong>{% trans "Saldo de apertura" %}</strong>: {% trans "el saldo con el que empiezas a registrar en Moneta." %}</li>
+    <li><strong>{% trans "Saldo actual" %}</strong>: {% trans "apertura más el efecto de todos los movimientos confirmados." %}</li>
+    <li><strong>{% trans "Moneda" %}</strong>: {% trans "código de la divisa de la cuenta." %}</li>
+</ul>
+
+<h2>{% trans "Acciones disponibles" %}</h2>
+<ul>
+    <li>{% trans "Crear, editar y desactivar cuentas." %}</li>
+    <li>{% trans "Eliminar solo si no tiene movimientos asociados." %}</li>
+</ul>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "No edites el saldo actual a mano: registra un movimiento de ajuste para que el histórico quede explicado." %}</p>

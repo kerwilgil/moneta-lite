@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ article.title }} · {% trans "Ayuda" %}{% endblock %}
+{% block section %}{% trans "Ayuda" %}{% endblock %}
+{% block content %}
+<nav class="help-breadcrumb" aria-label="{% trans 'Ruta de navegación' %}">
+    <ol>
+        <li><a href="{% url 'help:help_index' %}">{% trans "Ayuda" %}</a></li>
+        <li>{{ article.section }}</li>
+        <li aria-current="page">{{ article.title }}</li>
+    </ol>
+</nav>
+
+<article class="help-article">
+    <header class="page-heading">
+        <div>
+            <h1>{{ article.title }}</h1>
+            <p>{{ article.summary }}</p>
+        </div>
+    </header>
+
+    <div class="help-body">
+        {% include body_template %}
+    </div>
+
+    {% if article.guide %}
+    <p class="help-seealso">
+        {% blocktrans with g=article.guide %}Versión completa y ejemplos: <code>docs/user-guide/{{ g }}.md</code>{% endblocktrans %}
+    </p>
+    {% endif %}
+
+    <p class="help-back"><a href="{% url 'help:help_index' %}">&larr; {% trans "Volver al centro de ayuda" %}</a></p>
+</article>
+{% endblock %}

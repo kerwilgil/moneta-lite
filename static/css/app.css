@@ -2698,3 +2698,142 @@ html[data-theme="dark"] .quick-calc-grid .quick-calc-equals {
         page-break-inside: avoid;
     }
 }
+
+/* ------------------------------------------------------------------ */
+/* Help Center                                                         */
+/* ------------------------------------------------------------------ */
+.help-search {
+    max-width: 640px;
+    margin: 0 0 1.5rem;
+}
+.help-search .form-label {
+    font-weight: 600;
+}
+.help-group {
+    margin-bottom: 1.75rem;
+}
+.help-group-title {
+    margin: 0 0 0.5rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.78rem;
+}
+.help-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.6rem;
+}
+.help-item > a {
+    display: block;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    text-decoration: none;
+    color: inherit;
+}
+.help-item > a:hover,
+.help-item > a:focus-visible {
+    border-color: var(--green);
+    outline: none;
+}
+.help-item strong {
+    display: block;
+}
+.help-item span {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+.help-empty {
+    color: var(--muted);
+    padding: 1rem 0;
+}
+.help-breadcrumb {
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+}
+.help-breadcrumb ol {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    color: var(--muted);
+}
+.help-breadcrumb li + li::before {
+    content: "/";
+    margin-right: 0.35rem;
+}
+.help-article .help-body {
+    max-width: 720px;
+}
+.help-article .help-body h2 {
+    font-size: 1.05rem;
+    margin: 1.4rem 0 0.4rem;
+}
+.help-article .help-body ul,
+.help-article .help-body ol {
+    padding-left: 1.2rem;
+}
+.help-article .help-body li {
+    margin: 0.2rem 0;
+}
+.help-seealso {
+    margin-top: 1.5rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+.help-back {
+    margin-top: 1rem;
+}
+.app-version {
+    opacity: 0.7;
+    font-weight: 500;
+}
+
+/* Contextual "? Cómo funciona" drawer */
+.help-inline {
+    margin: 0.75rem 0 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-soft);
+    max-width: 720px;
+}
+.help-inline > summary {
+    cursor: pointer;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--green-dark);
+    list-style: none;
+}
+.help-inline > summary::-webkit-details-marker {
+    display: none;
+}
+.help-inline > summary:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+}
+.help-inline[open] > summary {
+    border-bottom: 1px solid var(--line);
+}
+.help-inline-body {
+    padding: 0.75rem 0.9rem;
+    font-size: 0.9rem;
+}
+.help-inline-body p {
+    margin: 0 0 0.5rem;
+}
+.help-inline-body p:last-child {
+    margin-bottom: 0;
+}
+html[data-theme="dark"] .help-item > a {
+    background: var(--surface);
+}
+html[data-theme="dark"] .help-inline {
+    background: var(--surface-elevated-soft);
+}

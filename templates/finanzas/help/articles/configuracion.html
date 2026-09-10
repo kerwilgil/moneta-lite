@@ -1,0 +1,16 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "El lugar para gestionar tus cuentas y categorías, y ajustar idioma y tema." %}</p>
+
+<h2>{% trans "Qué puedes ajustar" %}</h2>
+<ul>
+    <li><strong>{% trans "Cuentas" %}</strong> {% trans "y" %} <strong>{% trans "categorías" %}</strong> {% trans "(con su límite mensual de presupuesto)." %}</li>
+    <li><strong>{% trans "Idioma" %}</strong>: {% trans "español (es-pa, es) o inglés." %}</li>
+    <li><strong>{% trans "Tema" %}</strong>: {% trans "claro, oscuro o automático según tu sistema." %}</li>
+</ul>
+
+<h2>{% trans "Notas" %}</h2>
+<ul>
+    <li>{% trans "Los nombres de cuenta y de categoría son únicos por usuario, sin distinguir mayúsculas." %}</li>
+    <li>{% trans "La edición activa (Lite, Pro, Personal) se define en el servidor mediante SAAS_EDITION y no se cambia desde la interfaz." %}</li>
+</ul>

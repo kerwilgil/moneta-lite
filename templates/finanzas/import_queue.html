@@ -10,6 +10,8 @@
         <p>{% trans "Revisa, edita y aprueba manualmente los borradores propuestos por agentes o importadores." %}</p>
     </div>
 </section>
+{% trans "Cada elemento es una propuesta de movimiento, no un movimiento real. Pueden llegar desde integraciones, archivos o agentes de IA. Moneta marca los duplicados y nada entra al núcleo financiero hasta que una persona lo aprueba." as help_text %}
+{% include "finanzas/help/_help_button.html" with slug="importaciones" text=help_text %}
 
 <nav class="import-tabs" aria-label="{% trans 'Filtrar por estado' %}">
     <ul class="nav nav-pills">

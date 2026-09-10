@@ -11,6 +11,8 @@
     </div>
     <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_transactions_csv' %}">{% if lang_code|slice:':2' == 'en' %}Export CSV{% else %}Exportar CSV{% endif %}</a>
 </section>
+{% trans "Capital neto es activos menos pasivos. El presupuesto por categoría compara el gasto del mes con el límite que configuraste en cada categoría." as help_text %}
+{% include "finanzas/help/_help_button.html" with slug="reportes" text=help_text %}
 
 <section class="metric-grid">
     <article class="metric-card">

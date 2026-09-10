@@ -1,0 +1,4 @@
+# Optional: PostgreSQL client. Install only if DB_ENGINE points at PostgreSQL.
+#   pip install -r requirements.txt -r requirements-postgres.txt
+# SQLite (the default) needs nothing from this file.
+psycopg[binary]>=3.2,<4

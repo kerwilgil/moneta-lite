@@ -1,0 +1,24 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "Registro de facturas emitidas (a clientes) y recibidas (de proveedores)." %}</p>
+
+<h2>{% trans "Para qué sirve" %}</h2>
+<p>{% trans "Seguir qué te deben y qué debes, con su fecha de vencimiento y estado." %}</p>
+
+<h2>{% trans "Campos principales" %}</h2>
+<ul>
+    <li><strong>{% trans "Tipo" %}</strong>: {% trans "emitida o recibida." %}</li>
+    <li><strong>{% trans "Subtotal e impuestos" %}</strong>: {% trans "el total se calcula a partir de ellos." %}</li>
+    <li><strong>{% trans "Fecha de emisión y de vencimiento" %}</strong>.</li>
+    <li><strong>{% trans "Estado" %}</strong>: {% trans "borrador, pendiente, pagada, vencida o anulada." %}</li>
+</ul>
+
+<h2>{% trans "Acciones disponibles" %}</h2>
+<ul>
+    <li>{% trans "Crear, editar y eliminar facturas." %}</li>
+    <li>{% trans "Marcar como vencidas las que pasaron de su fecha de pago." %}</li>
+    <li>{% trans "Exportar a CSV." %}</li>
+</ul>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "El subtotal debe ser mayor que cero. Anular una factura no borra su histórico." %}</p>

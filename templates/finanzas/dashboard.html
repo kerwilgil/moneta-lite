@@ -14,6 +14,8 @@
         <button class="btn btn-outline-secondary btn-sm" id="dashboard-refresh" type="button">{% if lang_code|slice:':2' == 'en' %}Refresh{% else %}Actualizar{% endif %}</button>
     </div>
 </section>
+{% trans "El Dashboard resume tu situación del periodo. Es de solo lectura: los números se calculan a partir de tus movimientos y no modifican saldos." as help_text %}
+{% include "finanzas/help/_help_button.html" with slug="dashboard" text=help_text %}
 
 <section class="metric-grid">
     <article class="metric-card metric-primary">

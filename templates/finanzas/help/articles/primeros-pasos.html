@@ -1,0 +1,20 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "La ruta mínima para dejar Moneta funcionando y registrar tu primer movimiento." %}</p>
+
+<h2>{% trans "Cómo usarlo" %}</h2>
+<ol>
+    <li>{% trans "Instala las dependencias y crea el archivo .env a partir de .env.example." %}</li>
+    <li>{% trans "Ejecuta las migraciones y crea tu usuario administrador." %}</li>
+    <li>{% trans "Inicia sesión y crea tus cuentas principales (banco, efectivo, capital)." %}</li>
+    <li>{% trans "Registra un movimiento de prueba y revisa el Dashboard." %}</li>
+</ol>
+
+<h2>{% trans "Ejemplo" %}</h2>
+<p>{% trans "Crea una cuenta \"Banco principal\" con saldo de apertura 1000, y un gasto de 20 en la categoría \"Comida\". El Dashboard debe mostrar balance 980." %}</p>
+
+<h2>{% trans "Notas" %}</h2>
+<ul>
+    <li>{% trans "Deja DJANGO_DEBUG=1 solo para pruebas locales en 127.0.0.1." %}</li>
+    <li>{% trans "Para acceder desde otra máquina, usa HTTPS mediante un proxy inverso o una VPN privada." %}</li>
+</ul>

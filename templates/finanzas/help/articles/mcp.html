@@ -1,0 +1,27 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "Moneta MCP permite que clientes compatibles con el Model Context Protocol consulten tu información financiera y creen borradores para revisión humana." %}</p>
+
+<h2>{% trans "Qué NO pueden hacer los agentes" %}</h2>
+<ul>
+    <li>{% trans "Aprobar transacciones." %}</li>
+    <li>{% trans "Cambiar balances." %}</li>
+    <li>{% trans "Borrar transacciones o cuentas." %}</li>
+    <li>{% trans "Confirmar pagos." %}</li>
+</ul>
+
+<h2>{% trans "Permisos (scopes)" %}</h2>
+<ul>
+    <li><strong>read</strong>: {% trans "resúmenes, cuentas, movimientos, categorías, tarjetas, suscripciones y próximos vencimientos (10 herramientas)." %}</li>
+    <li><strong>draft</strong>: {% trans "además, crear lotes y borradores, listarlos, editarlos y rechazarlos (5 herramientas)." %}</li>
+</ul>
+
+<h2>{% trans "Cómo usarlo" %}</h2>
+<ol>
+    <li>{% trans "Ve a Integraciones · Moneta MCP y genera un token con los scopes que necesites." %}</li>
+    <li>{% trans "Copia el token en ese momento: se muestra una sola vez y se guarda solo como hash." %}</li>
+    <li>{% trans "Conecta tu cliente por stdio o por Streamable HTTP siguiendo las instrucciones de esa pantalla." %}</li>
+</ol>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "Protocolo moderno 2026-07-28. Cada token está limitado a tu usuario; no puede acceder a datos de otras personas. Puedes deshabilitarlo o revocarlo en cualquier momento." %}</p>

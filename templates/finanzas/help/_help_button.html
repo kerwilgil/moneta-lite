@@ -1,0 +1,16 @@
+{% comment %}
+Contextual help drawer. CSP-safe (no inline JS), works offline.
+Usage:
+  {% trans "Short explanation of this screen." as help_text %}
+  {% include "finanzas/help/_help_button.html" with slug="dashboard" text=help_text %}
+{% endcomment %}
+{% load i18n %}
+<details class="help-inline">
+    <summary>{% trans "? Cómo funciona" %}</summary>
+    <div class="help-inline-body">
+        <p>{{ text }}</p>
+        {% if slug %}
+        <p><a href="{% url 'help:help_article' slug %}">{% trans "Abrir el artículo completo" %} &rarr;</a></p>
+        {% endif %}
+    </div>
+</details>

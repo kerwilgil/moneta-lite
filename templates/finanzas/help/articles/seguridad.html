@@ -1,0 +1,23 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "Cómo protege Moneta tus datos y qué debes configurar tú al desplegarlo." %}</p>
+
+<h2>{% trans "Lo que hace Moneta" %}</h2>
+<ul>
+    <li>{% trans "Aislamiento por usuario: cada consulta se limita a tu cuenta, también en MCP." %}</li>
+    <li>{% trans "Los tokens MCP se guardan como hash (HMAC-SHA256 con pepper); el valor en claro no se almacena." %}</li>
+    <li>{% trans "Aprobación humana para todo lo que llega de fuera (cola de importaciones)." %}</li>
+    <li>{% trans "Protección CSRF en cada formulario y sin efectos de escritura en peticiones GET." %}</li>
+    <li>{% trans "Límite de intentos de inicio de sesión y registro de auditoría de las llamadas MCP." %}</li>
+</ul>
+
+<h2>{% trans "Lo que debes configurar tú" %}</h2>
+<ul>
+    <li>{% trans "DJANGO_DEBUG=0 y una DJANGO_SECRET_KEY privada de 50+ caracteres." %}</li>
+    <li>{% trans "DJANGO_ALLOWED_HOSTS y DJANGO_CSRF_TRUSTED_ORIGINS con tu dominio real." %}</li>
+    <li>{% trans "HTTPS obligatorio; el endpoint MCP HTTP detrás de un proxy autenticado o en loopback." %}</li>
+    <li>{% trans "Copias de seguridad de la base de datos." %}</li>
+</ul>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "Para reportar una vulnerabilidad, sigue el archivo SECURITY.md del repositorio; no abras una incidencia pública." %}</p>

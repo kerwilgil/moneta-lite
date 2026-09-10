@@ -1,0 +1,21 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "Una lectura ejecutiva de tu situación: activos, pasivos, capital neto, flujo del mes y presupuesto por categoría." %}</p>
+
+<h2>{% trans "Campos principales" %}</h2>
+<ul>
+    <li><strong>{% trans "Activos" %}</strong>: {% trans "recursos reales, sin límites de tarjeta." %}</li>
+    <li><strong>{% trans "Pasivos" %}</strong>: {% trans "deuda actual, sin contar límites aprobados." %}</li>
+    <li><strong>{% trans "Capital neto" %}</strong>: {% trans "activos menos pasivos." %}</li>
+    <li><strong>{% trans "Flujo del mes" %}</strong>: {% trans "ingresos, gastos, pagos de tarjeta y flujo neto del periodo." %}</li>
+    <li><strong>{% trans "Presupuesto por categoría" %}</strong>: {% trans "gasto del mes frente al límite que configuraste en cada categoría." %}</li>
+</ul>
+
+<h2>{% trans "Acciones disponibles" %}</h2>
+<ul>
+    <li>{% trans "Exportar el resumen a CSV." %}</li>
+    <li>{% trans "Ajustar los límites de categoría desde Configuración." %}</li>
+</ul>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "Los reportes son de solo lectura y se recalculan cada vez que los abres." %}</p>

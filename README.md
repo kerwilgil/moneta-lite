@@ -3,13 +3,14 @@
 
   <h1>Moneta Lite</h1>
 
-  <p><strong>Plataforma self-hosted de finanzas personales: cuentas, tarjetas, suscripciones, facturas y reportes en un panel local, bilingüe y orientado a la privacidad.</strong></p>
+  <p><strong>Self-hosted personal finance platform · MCP-ready · privacy-oriented · bilingual (ES/EN) · human-controlled financial automation.</strong></p>
 
   <p>
     <img alt="Python" src="https://img.shields.io/badge/Python-3.12%20%E2%80%93%203.14-1f6feb?style=flat-square&logo=python&logoColor=white">
     <img alt="Django" src="https://img.shields.io/badge/Django-6.0-0b5f3a?style=flat-square&logo=django&logoColor=white">
+    <img alt="Database" src="https://img.shields.io/badge/DB-SQLite%20%7C%20PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white">
     <img alt="MCP" src="https://img.shields.io/badge/MCP-2026--07--28-6f42c1?style=flat-square">
-    <img alt="Tests" src="https://img.shields.io/badge/tests-172%20passing-2ea44f?style=flat-square">
+    <img alt="Tests" src="https://img.shields.io/badge/tests-182%20passing-2ea44f?style=flat-square">
     <img alt="i18n" src="https://img.shields.io/badge/i18n-ES%20%7C%20EN-1f6feb?style=flat-square">
     <img alt="License" src="https://img.shields.io/badge/License-MIT-c9a227?style=flat-square">
   </p>
@@ -19,32 +20,60 @@
 
 ---
 
-Moneta Lite es la edición **gratuita y de código abierto** de Moneta. Corre en tu
-propia máquina (Windows, Linux, macOS o NAS), guarda los datos en tu disco y
-funciona **sin conexión, sin cuenta en la nube y sin clave de API**.
+**Moneta** es un gestor de finanzas personales *self-hosted*: cuentas, gastos,
+facturas, tarjetas, suscripciones, reportes, una **cola de importaciones** con
+deduplicación y un **servidor MCP** para agentes de IA. Corre en tu equipo
+(Windows, Linux, macOS o NAS), guarda los datos en tu disco y funciona **sin
+conexión, sin cuenta en la nube y sin clave de API**.
 
-Además, expone un servidor **MCP** para que un agente de IA pueda **leer** tus
-finanzas y **proponer borradores** — pero el núcleo financiero es determinista y
-**cada movimiento real lo aprueba una persona**.
+**Moneta Lite** es la edición **gratuita y de código abierto** (MIT).
 
-- 🔒 **Tuyo y local** — SQLite por defecto, PostgreSQL opcional. Nada sale de tu equipo.
-- 🌐 **Bilingüe** — español (`es-pa`, `es`) e inglés (`en`).
-- 🌗 **Modo claro y oscuro**.
-- 🤖 **MCP-ready** — interoperable con agentes, con una frontera de aprobación humana.
-- 🧾 **Cola de importaciones** — deduplicación + revisión humana para todo lo que entra de fuera.
+```text
+✓ Dashboard financiero              ✓ Cola de importaciones con deduplicación
+✓ Cuentas y movimientos            ✓ MCP 2026-07-28 — 15 herramientas
+✓ Facturas y tarjetas de crédito   ✓ Interoperable con agentes de IA
+✓ Suscripciones y seguros          ✓ Aprobación humana obligatoria
+✓ Reportes y presupuesto           ✓ SQLite + PostgreSQL
+✓ Exportación CSV                  ✓ Español / English · claro / oscuro
+```
+
+La IA puede **interpretar**, **sugerir** y **crear borradores**; el núcleo
+financiero es **determinista** y **cada movimiento real lo aprueba una persona**.
+
+## Novedades de v0.3.0
+
+- **Cola de importaciones** — `ImportBatch` + `TransactionDraft`, deduplicación
+  exacta y por *fingerprint v2*, idempotencia, aprobación y rollback atómicos.
+- **Moneta MCP** — protocolo moderno `2026-07-28`, transportes **stdio** y
+  **Streamable HTTP oficial**, **10 herramientas `read` + 5 `draft`**.
+- **Interoperabilidad con IA** — base `AIProvider` / `DisabledProvider`,
+  deshabilitada por defecto; la IA nunca es autoridad financiera.
+- **Tokens, scopes y auditoría** — hash HMAC-SHA256, token de un solo uso,
+  aislamiento por usuario, rate limiting, registro de auditoría.
+- **Flujo de aprobación humana** para todo lo que entra de fuera.
+- **Centro de ayuda dentro de la app** (`/ayuda/`) con búsqueda y ayuda
+  contextual, en ES/EN.
+- **PostgreSQL validado contra una instancia real** (18.6); SQLite sigue siendo
+  el modo por defecto.
+- Refuerzo de seguridad, mejoras de i18n y de rendimiento, y documentación nueva.
+
+Detalle: [`CHANGELOG.md`](CHANGELOG.md) · [`docs/release-notes/v0.3.0.md`](docs/release-notes/v0.3.0.md)
 
 ## Tabla de contenidos
 
+- [Novedades de v0.3.0](#novedades-de-v030)
 - [Funcionalidades](#funcionalidades)
 - [Capturas](#capturas)
-- [Inicio rápido](#inicio-rápido)
+- [Inicio rápido (SQLite)](#inicio-rápido-sqlite)
 - [Requisitos](#requisitos)
 - [Instalación](#instalación)
+- [Bases de datos: SQLite y PostgreSQL](#bases-de-datos-sqlite-y-postgresql)
 - [Configuración](#configuración)
 - [Lite vs Pro](#lite-vs-pro)
 - [Cola de importaciones](#cola-de-importaciones)
 - [Moneta MCP](#moneta-mcp)
 - [Interoperabilidad con IA](#interoperabilidad-con-ia)
+- [Ayuda](#ayuda)
 - [Seguridad](#seguridad)
 - [Idiomas](#idiomas)
 - [Self-hosting](#self-hosting)
@@ -56,19 +85,34 @@ finanzas y **proponer borradores** — pero el núcleo financiero es determinist
 
 ## Funcionalidades
 
-| | Módulo | Qué hace |
-|---|--------|----------|
-| 📊 | **Dashboard** | Balance, ingresos del mes, deuda registrada, cuentas y tendencia de flujo. |
-| 💳 | **Cuentas** | Efectivo, banco, ahorro, inversión, tarjetas, préstamos y capital. |
-| 🔁 | **Movimientos** | Ingresos, gastos, transferencias y pagos de tarjeta, con filtros y resumen. |
-| 🏦 | **Tarjetas de crédito** | Límite, saldo, disponible, uso %, pago mínimo y contado, corte/vencimiento. |
-| 🛡️ | **Suscripciones** | Gasto recurrente y apartado de seguros privados (vida, salud, ingreso). |
-| 🧾 | **Facturas** | Emitidas y recibidas, con estados y marcado de vencidas. |
-| 📈 | **Reportes** | Activos, pasivos, capital neto, flujo del mes y presupuesto por categoría. |
-| 📤 | **Exportación CSV** | Movimientos, facturas y suscripciones. |
-| 🧠 | **Cola de importaciones** | Borradores con deduplicación y aprobación humana. |
-| 🔌 | **Moneta MCP** | Servidor MCP `2026-07-28` con scopes `read` y `draft`. |
-| 📚 | **Manual de usuario** | Incluido en español e inglés (`docs/manual/`). |
+**Finanzas personales**
+
+- Dashboard financiero — balance, ingresos del mes, deuda, cuentas y tendencia de flujo.
+- Cuentas — efectivo, banco, ahorro, inversión, tarjetas, préstamos y capital.
+- Movimientos — ingresos, gastos, transferencias, pagos de tarjeta y cobros, con filtros.
+- Facturas — emitidas y recibidas, estados y vencimientos.
+- Tarjetas de crédito — límite, saldo, disponible, uso %, pago mínimo y de contado, corte y pago.
+- Suscripciones y seguros privados (vida, salud, ingreso).
+- Reportes — activos, pasivos, capital neto, flujo del mes y presupuesto por categoría.
+- Exportación CSV de movimientos, facturas y suscripciones.
+
+**Automatización e inteligencia**
+
+- Cola de importaciones — propuestas de movimientos con deduplicación (*fingerprint v2*).
+- Deduplicación exacta por `external_id` y por huella del contenido.
+- Moneta MCP — servidor MCP `2026-07-28`, transportes stdio y Streamable HTTP.
+- 15 herramientas MCP — 10 de lectura + 5 de borradores.
+- Interoperabilidad con agentes de IA, con IA opcional y deshabilitada por defecto.
+- Aprobación humana obligatoria para todo lo que entra de fuera.
+
+**Plataforma**
+
+- Self-hosted — tus datos en tu disco, funciona sin conexión.
+- SQLite por defecto · PostgreSQL para producción y multiusuario.
+- Bilingüe — español (`es-pa`, `es`) e inglés (`en`).
+- Tema claro / oscuro / automático.
+- Controles de seguridad — aislamiento por usuario, CSRF, rate limiting, auditoría, bloqueo de login.
+- Centro de ayuda dentro de la aplicación.
 
 > Moneta Lite **no** incluye pagos recurrentes automáticos, catálogo completo de
 > suscripciones, libro contable, ingreso neto ni exportaciones avanzadas. Esos
@@ -94,7 +138,9 @@ finanzas y **proponer borradores** — pero el núcleo financiero es determinist
 
 _Todas las capturas usan datos de demostración ficticios._
 
-## Inicio rápido
+## Inicio rápido (SQLite)
+
+SQLite es el modo por defecto y no requiere instalar ninguna base de datos.
 
 ```bash
 # 1. Clonar
@@ -143,6 +189,30 @@ Guía paso a paso para usuarios sin experiencia técnica: [`QUICKSTART.md`](QUIC
 
 - **Prueba rápida:** [`QUICKSTART.md`](QUICKSTART.md).
 - **Instalación completa** (Windows, macOS, Linux, NAS/QNAP, servidor): [`INSTALL.md`](INSTALL.md).
+
+## Bases de datos: SQLite y PostgreSQL
+
+| | SQLite (por defecto) | PostgreSQL (recomendado en producción) |
+|---|---|---|
+| Instalación | Nada que instalar | Servidor PostgreSQL 14+ y `pip install "psycopg[binary]"` |
+| Ideal para | Uso personal, pruebas, un solo usuario | Multiusuario, alta concurrencia, cargas grandes |
+| Copia de seguridad | Copiar `db.sqlite3` | `pg_dump` / `pg_restore` |
+
+**Pasar a PostgreSQL:** crea una base y un usuario, define las variables `DB_*`
+en tu `.env` (ver `.env.example`) y ejecuta `python manage.py migrate`.
+
+```env
+DB_ENGINE=django.db.backends.postgresql
+DB_NAME=moneta
+DB_USER=moneta
+DB_PASSWORD=coloca-una-clave-privada
+DB_HOST=127.0.0.1
+DB_PORT=5432
+```
+
+Moneta v0.3.0 se validó contra **PostgreSQL 18.6** real (migraciones, constraints,
+concurrencia con bloqueo de fila, cola de importaciones y MCP). No hay migración
+automática de datos entre backends. Guía completa: [`docs/postgresql.md`](docs/postgresql.md).
 
 ## Configuración
 
@@ -241,6 +311,16 @@ Detalle y ejemplo de configuración de cliente: [`docs/mcp.md`](docs/mcp.md).
   (`AIProvider` / `DisabledProvider`) viene deshabilitada por defecto; la IA
   nunca es autoridad financiera.
 
+## Ayuda
+
+Moneta incluye un **centro de ayuda dentro de la aplicación** en `/ayuda/`:
+índice con búsqueda, un artículo por módulo (qué es, para qué sirve, cómo se usa,
+campos, acciones, ejemplo y notas) y ayuda contextual ("? Cómo funciona") en las
+pantallas clave. Funciona sin conexión y en español e inglés; la edición Lite no
+muestra los módulos Pro.
+
+La referencia completa está en [`docs/user-guide/`](docs/user-guide/).
+
 ## Seguridad
 
 - Aislamiento por inquilino en cada consulta (incluido MCP).
@@ -293,8 +373,15 @@ SQLite/PostgreSQL. Sin build de frontend.
 python manage.py test
 ```
 
-Baseline actual: **172 tests** (`0 fallos`, `0 errores`, `6 omitidos` en Lite —
-2 de exportaciones avanzadas por *feature gate* y 4 exclusivos de PostgreSQL).
+Baseline: **182 tests**, `0 fallos`, `0 errores`, más las suites del centro de ayuda.
+
+| Backend | Resultado |
+|---------|-----------|
+| SQLite | 182 passed, 6 skipped (2 `exports_advanced` + 4 solo PostgreSQL) |
+| PostgreSQL | 182 passed, 2 skipped (`exports_advanced`) |
+
+Para ejecutar contra PostgreSQL, define las variables `DB_*` y vuelve a lanzar
+`python manage.py test` (ver [`docs/postgresql.md`](docs/postgresql.md)).
 
 ## Documentación
 
@@ -302,13 +389,15 @@ Baseline actual: **172 tests** (`0 fallos`, `0 errores`, `6 omitidos` en Lite �
 |-----------|-----------|
 | [`QUICKSTART.md`](QUICKSTART.md) | Prueba rápida en local. |
 | [`INSTALL.md`](INSTALL.md) | Instalación completa (Windows, macOS, Linux, NAS). |
+| [`docs/user-guide/`](docs/user-guide/) | Guía de usuario completa, un archivo por módulo. |
+| [`docs/postgresql.md`](docs/postgresql.md) | Configuración, migración y errores comunes de PostgreSQL. |
 | [`docs/mcp.md`](docs/mcp.md) | Servidor Moneta MCP: transportes, scopes, herramientas, ejemplos. |
 | [`docs/import-queue.md`](docs/import-queue.md) | Flujo de la cola de importaciones. |
 | [`SECURITY.md`](SECURITY.md) | Política de seguridad y postura defensiva. |
 | [`FAQ.md`](FAQ.md) | Preguntas frecuentes. |
 | [`SUPPORT.md`](SUPPORT.md) | Alcance del soporte. |
-| [`CHANGELOG.md`](CHANGELOG.md) | Historial de cambios. |
-| [`docs/manual/`](docs/manual/) | Manual de usuario (ES / EN). |
+| [`CHANGELOG.md`](CHANGELOG.md) · [`docs/release-notes/v0.3.0.md`](docs/release-notes/v0.3.0.md) | Historial de cambios y notas de versión. |
+| [`docs/manual/`](docs/manual/) | Manual de usuario en HTML/PDF (ES / EN). |
 
 ## Roadmap
 
@@ -316,8 +405,9 @@ Baseline actual: **172 tests** (`0 fallos`, `0 errores`, `6 omitidos` en Lite �
 - [x] i18n ES/EN y modo claro/oscuro.
 - [x] Cola de importaciones con deduplicación y aprobación humana.
 - [x] Servidor Moneta MCP (`2026-07-28`, stdio + Streamable HTTP).
-- [ ] Validación de integración PostgreSQL en real (previa a `v0.3.0`).
-- [ ] Publicación de `v0.3.0`.
+- [x] Centro de ayuda dentro de la aplicación (ES/EN).
+- [x] Integración PostgreSQL validada contra una instancia real (18.6).
+- [ ] Publicación de `v0.3.0` (tras la auditoría posterior).
 
 ## Licencia
 

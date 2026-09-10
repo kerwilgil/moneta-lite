@@ -11,6 +11,8 @@
     </div>
     <a class="btn btn-success btn-sm" href="{% url 'finanzas:credit_card_create' %}">{% trans "Nueva tarjeta" %}</a>
 </section>
+{% trans "Límite es lo que el banco te presta; disponible es límite menos saldo. La fecha de corte cierra el estado de cuenta y la fecha de pago es el día límite sin intereses de mora. El límite no cuenta como dinero en tu balance." as help_text %}
+{% include "finanzas/help/_help_button.html" with slug="tarjetas" text=help_text %}
 
 <section class="credit-card-stack">
     {% for card in cards %}

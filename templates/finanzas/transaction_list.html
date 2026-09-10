@@ -15,6 +15,8 @@
         <a class="btn btn-success btn-sm" href="{% url 'finanzas:transaction_create' %}">{% trans "Nuevo movimiento" %}</a>
     </div>
 </section>
+{% trans "Los movimientos son la fuente de verdad de Moneta. La categoría debe coincidir con el tipo, y editar o eliminar uno recalcula los saldos afectados." as help_text %}
+{% include "finanzas/help/_help_button.html" with slug="movimientos" text=help_text %}
 
 <section class="mini-metric-grid">
     <article class="mini-metric-card">

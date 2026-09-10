@@ -1,0 +1,23 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "La pantalla de inicio. Resume tu situación financiera del periodo seleccionado." %}</p>
+
+<h2>{% trans "Para qué sirve" %}</h2>
+<p>{% trans "Ver de un vistazo tu balance real, cuánto entró y salió este mes, y la deuda registrada." %}</p>
+
+<h2>{% trans "Campos principales" %}</h2>
+<ul>
+    <li><strong>{% trans "Balance total" %}</strong>: {% trans "activos reales, sin incluir los límites de tarjeta." %}</li>
+    <li><strong>{% trans "Ingresos del mes" %}</strong>: {% trans "ingresos y cobros confirmados del periodo." %}</li>
+    <li><strong>{% trans "Deuda registrada" %}</strong>: {% trans "préstamos, cuentas por pagar y deuda real de tarjetas." %}</li>
+    <li><strong>{% trans "Tendencia de flujo" %}</strong>: {% trans "gráfico de barras del flujo mensual; su alternativa en texto está disponible para lectores de pantalla." %}</li>
+</ul>
+
+<h2>{% trans "Acciones disponibles" %}</h2>
+<ul>
+    <li>{% trans "Cambiar el periodo (por ejemplo, \"Este mes\")." %}</li>
+    <li>{% trans "Agregar una cuenta o un movimiento desde los botones rápidos." %}</li>
+</ul>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "El Dashboard es de solo lectura: no modifica saldos. Los números se recalculan a partir de tus movimientos." %}</p>

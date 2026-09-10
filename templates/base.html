@@ -76,10 +76,11 @@
             {% if features.admin_link %}<a class="nav-link" href="/admin/" aria-label="{% trans 'Administración' %}"><span class="nav-icon nav-icon-admin" aria-hidden="true"><span></span></span><span>{% trans 'Administración' %}</span></a>{% endif %}
             {% if features.settings %}<a class="nav-link {% if active == 'settings' %}active{% endif %}" href="{% url 'finanzas:settings' %}" {% if active == 'settings' %}aria-current="page"{% endif %} aria-label="{% trans 'Ajustes' %}"><span class="nav-icon nav-icon-settings" aria-hidden="true"><span></span></span><span>{% trans 'Ajustes' %}</span></a>{% endif %}
             {% if features.settings %}<a class="nav-link {% if active == 'mcp' %}active{% endif %}" href="{% url 'integrations:mcp' %}" {% if active == 'mcp' %}aria-current="page"{% endif %} aria-label="{% trans 'Integraciones' %}"><span class="nav-icon nav-icon-settings" aria-hidden="true"><span></span></span><span>{% trans 'Integraciones' %}</span></a>{% endif %}
+            <a class="nav-link {% if active == 'help_index' or active == 'help_article' %}active{% endif %}" href="{% url 'help:help_index' %}" {% if active == 'help_index' or active == 'help_article' %}aria-current="page"{% endif %} aria-label="{% trans 'Ayuda' %}"><span class="nav-icon nav-icon-settings" aria-hidden="true"><span></span></span><span>{% trans 'Ayuda' %}</span></a>
         </nav>
 
         <div class="upgrade-box">
-            <strong>{{ product.name }} {{ edition.label }}</strong>
+            <strong>{{ product.name }} {{ edition.label }}{% if product.version %} <span class="app-version">v{{ product.version }}</span>{% endif %}</strong>
             <span>{% if edition.is_lite %}{% trans "Edición ligera del producto lista para venta y onboarding rápido." %}{% elif edition.is_personal %}{% trans "Compilación privada para tu uso propio en PC o NAS." %}{% else %}{% trans "Espacio completo para demos, módulos avanzados y evolución del producto." %}{% endif %}</span>
         </div>
 
@@ -154,5 +155,6 @@
 <script src="{% static 'js/dashboard.js' %}"></script>
 <script src="{% static 'js/salary_calculator.js' %}"></script>
 <script src="{% static 'js/nav.js' %}"></script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -10,6 +10,8 @@
         <p>{% trans "Concede a un agente compatible con MCP acceso de solo lectura o de borradores a tus finanzas. Ningún token puede aprobar movimientos ni mover saldos." %}</p>
     </div>
 </section>
+{% trans "El scope read deja consultar; draft deja además crear borradores para tu revisión. Ningún token puede aprobar, borrar, confirmar pagos ni cambiar saldos. El token se muestra una sola vez y se guarda como hash." as help_text %}
+{% include "finanzas/help/_help_button.html" with slug="mcp" text=help_text %}
 
 {% if revealed %}
 <div class="alert alert-warning" role="alert">

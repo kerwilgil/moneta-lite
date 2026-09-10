@@ -15,5 +15,6 @@ urlpatterns = [
     path("i18n/", include("django.conf.urls.i18n")),
     path("importaciones/", include("finanzas.intelligence.imports.urls")),
     path("configuracion/integraciones/", include("finanzas.intelligence.mcp.ui_urls")),
+    path("ayuda/", include("finanzas.help_urls")),
     path("", include("finanzas.urls")),
 ]
