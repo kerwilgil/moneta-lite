@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased — 0.3.0 (Intelligence & Interoperability)
+
+_En preparación. La publicación de `v0.3.0` está bloqueada por la validación de
+integración PostgreSQL en real._
+
+- Añadida la **cola de importaciones**: `ImportBatch` + `TransactionDraft`,
+  deduplicación exacta y por *fingerprint v2*, normalización de `external_id`,
+  sanitización de `raw_metadata`, aprobación y rechazo humanos, marcado de
+  duplicados, idempotencia y volcado atómico con `rollback`.
+- Añadido el **servidor Moneta MCP** sobre el SDK oficial `mcp` 2.2.x
+  (`mcp.server.lowlevel.Server`): protocolo moderno `2026-07-28` (y legacy
+  `2025-11-25`), transportes **stdio** y **Streamable HTTP oficial**
+  (`Server.streamable_http_app`), 15 herramientas (10 `read` + 5 `draft`).
+- Seguridad MCP: autenticación por token con HMAC-SHA256 + *pepper* (token en
+  claro no persistido), token de un solo uso en la UI, scopes `read`/`draft`,
+  aislamiento por inquilino, paginación, validación de entrada, rate limiting,
+  auditoría y redacción de secretos. Eliminado `--allow-unauthenticated`.
+- Añadida la **base de IA** (`AIProvider` / `DisabledProvider`): Moneta funciona
+  sin IA, sin clave de API y sin internet; la IA nunca es autoridad financiera.
+- UI: pantalla de cola de importaciones (editar / aprobar / rechazar) y ajustes
+  **Configuración → Integraciones → Moneta MCP** (habilitar, generar, regenerar,
+  revocar, scopes, prefijo, último uso, instrucciones de conexión, token de un
+  solo uso), con i18n `es-pa` / `es` / `en` y accesibilidad revisada.
+- Corrección: `finanzas/views.py` importaba `SimpleNamespace` sin declararlo, lo
+  que provocaba un error 500 en la lista de movimientos al reutilizar la caché de
+  filtros de sesión; añadido el import y una prueba de regresión.
+- Documentación: README profesional, capturas reales con datos de demostración,
+  `docs/mcp.md`, `docs/import-queue.md`, `SECURITY.md`, plantilla de release y
+  metadata de GitHub.
+- Cobertura de pruebas: 172 tests (0 fallos, 0 errores).
+
 ## 0.2.0 - 2026-08-01
 
 - Updated Django to the security-fixed 6.0.7 baseline and made production-safe settings the default.

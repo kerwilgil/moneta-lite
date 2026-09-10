@@ -390,6 +390,16 @@ class FinanceViewSmokeTests(TestCase):
                 response = self.client.get(reverse(route_name))
                 self.assertEqual(response.status_code, 200)
 
+    def test_transaction_list_repeat_request_uses_session_filter_cache(self):
+        # Second request within the TTL rebuilds the filter choices from the
+        # session cache; regression guard for the missing SimpleNamespace import.
+        url = reverse("finanzas:transaction_list")
+        first = self.client.get(url)
+        self.assertEqual(first.status_code, 200)
+        self.assertIn("_transaction_list_filter_cache", self.client.session)
+        second = self.client.get(url)
+        self.assertEqual(second.status_code, 200)
+
     def test_create_account_category_invoice_transaction_recurring_subscription_and_card(self):
         response = self.client.post(
             reverse("finanzas:account_create"),
