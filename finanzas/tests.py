@@ -12,7 +12,7 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.management import call_command
 from django.db import IntegrityError, transaction, connection
 from django.test import Client, override_settings
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
@@ -1056,6 +1056,206 @@ class Phase2CorrectnessTests(TestCase):
                 )
 
 
+class Phase3PostgresIntegrationTests(TransactionTestCase):
+    """T-02 / T-06 checks that require a real backend with row locking and
+    committed data visible across connections (skipped on SQLite).
+
+    Uses ``TransactionTestCase`` so worker threads see committed rows and the
+    migration executor is not wrapped in the test's transaction.
+    """
+
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(username="tester", password="secret")
+        self.checking = Account.objects.create(
+            user=self.user,
+            name="Banco",
+            account_type=Account.AccountType.CHECKING,
+            opening_balance=Decimal("1000.00"),
+            current_balance=Decimal("1000.00"),
+        )
+        self.expense_category = Category.objects.create(
+            user=self.user,
+            name="Gastos",
+            category_type=Category.CategoryType.EXPENSE,
+        )
+
+    @staticmethod
+    def _worker(fn):
+        """Run ``fn`` in a thread body and always release the DB connection so
+        the TransactionTestCase table truncation at teardown cannot deadlock."""
+        def wrapped():
+            try:
+                fn()
+            finally:
+                connection.close()
+        return wrapped
+
+    @unittest.skipIf(
+        connection.vendor == "sqlite",
+        "SQLite does not support concurrent writes; test requires PostgreSQL",
+    )
+    def test_recurring_concurrent_execution(self):
+        """T-02: Concurrent recurring execution should be safe with select_for_update."""
+        from threading import Thread
+
+        recurring = RecurringPayment.objects.create(
+            user=self.user,
+            name="Concurrent Recurring",
+            account=self.checking,
+            category=self.expense_category,
+            amount=Decimal("10.00"),
+            next_due_date=timezone.localdate(),
+            auto_create_transaction=True,
+        )
+
+        errors = []
+
+        def run_recurring():
+            try:
+                execute_due_recurrings_for_user(self.user, run_date=timezone.localdate())
+            except Exception as e:  # noqa: BLE001
+                errors.append(e)
+
+        threads = [Thread(target=self._worker(run_recurring)) for _ in range(3)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        self.assertEqual(len(errors), 0, f"Concurrent execution errors: {errors}")
+        txs = FinancialTransaction.objects.filter(user=self.user, source_recurring=recurring)
+        # One cycle ahead only, and the occurrence is idempotent.
+        self.assertEqual(txs.exclude(status=FinancialTransaction.Status.VOID).count(), 1)
+
+    @unittest.skipIf(
+        connection.vendor == "sqlite",
+        "SQLite does not support concurrent writes; test requires PostgreSQL",
+    )
+    def test_rebuild_concurrent(self):
+        """T-02: Concurrent rebuilds should produce one consistent balance."""
+        from threading import Thread
+
+        for i in range(20):
+            FinancialTransaction.objects.create(
+                user=self.user,
+                account=self.checking,
+                category=self.expense_category,
+                transaction_type=FinancialTransaction.TransactionType.EXPENSE,
+                description=f"Expense {i}",
+                amount=Decimal("10.00"),
+                date=timezone.localdate(),
+                status=FinancialTransaction.Status.CLEARED,
+            )
+
+        errors = []
+        results = []
+
+        def rebuild():
+            try:
+                rebuild_account_balances(self.user)
+                acc = Account.objects.get(pk=self.checking.pk)
+                results.append(acc.current_balance)
+            except Exception as e:  # noqa: BLE001
+                errors.append(e)
+
+        threads = [Thread(target=self._worker(rebuild)) for _ in range(5)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        self.assertEqual(len(errors), 0, f"Concurrent rebuild errors: {errors}")
+        self.assertEqual(len(set(results)), 1, f"Inconsistent balances: {results}")
+        self.assertEqual(results[0], Decimal("1000.00") - Decimal("200.00"))
+
+    @unittest.skipIf(
+        connection.vendor == "sqlite",
+        "SQLite does not support concurrent writes; test requires PostgreSQL",
+    )
+    def test_transaction_concurrent_create_edit(self):
+        """T-02: Concurrent create/edit should not corrupt balances."""
+        from threading import Thread
+
+        errors = []
+
+        def create_tx():
+            try:
+                with transaction.atomic():
+                    FinancialTransaction.objects.create(
+                        user=self.user,
+                        account=self.checking,
+                        category=self.expense_category,
+                        transaction_type=FinancialTransaction.TransactionType.EXPENSE,
+                        description="Concurrent create",
+                        amount=Decimal("5.00"),
+                        date=timezone.localdate(),
+                        status=FinancialTransaction.Status.CLEARED,
+                    )
+            except Exception as e:  # noqa: BLE001
+                errors.append(e)
+
+        def edit_tx():
+            try:
+                tx = FinancialTransaction.objects.create(
+                    user=self.user,
+                    account=self.checking,
+                    category=self.expense_category,
+                    transaction_type=FinancialTransaction.TransactionType.EXPENSE,
+                    description="To edit",
+                    amount=Decimal("20.00"),
+                    date=timezone.localdate(),
+                    status=FinancialTransaction.Status.CLEARED,
+                )
+                tx.amount = Decimal("25.00")
+                tx.save()
+                rebuild_account_balances(self.user, force_account_ids=[self.checking.id])
+            except Exception as e:  # noqa: BLE001
+                errors.append(e)
+
+        threads = (
+            [Thread(target=self._worker(create_tx)) for _ in range(3)]
+            + [Thread(target=self._worker(edit_tx)) for _ in range(2)]
+        )
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        self.assertEqual(len(errors), 0, f"Concurrent tx errors: {errors}")
+
+    @unittest.skipIf(
+        connection.vendor == "sqlite",
+        "SQLite schema editor doesn't support this migration cycle; requires PostgreSQL",
+    )
+    def test_migrations_forward_backward(self):
+        """T-06: Every applied finanzas migration is reversible on PostgreSQL.
+
+        Walk the finanzas migrations newest -> oldest, unapplying each one and
+        re-applying it, so both directions of every operation are exercised on a
+        real backend.
+        """
+        from django.db.migrations.executor import MigrationExecutor
+        from django.db.migrations.recorder import MigrationRecorder
+
+        executor = MigrationExecutor(connection)
+        names = sorted(
+            n for a, n in MigrationRecorder(connection).applied_migrations()
+            if a == "finanzas"
+        )
+        latest = names[-1]
+        try:
+            # names[:-1] gives the target to roll *back to*; unapply the one above it.
+            for target in reversed(names[:-1]):
+                executor.migrate([("finanzas", target)])          # backward
+                executor.loader.build_graph()
+                executor.migrate([("finanzas", latest)])          # forward again
+                executor.loader.build_graph()
+        finally:
+            executor.loader.build_graph()
+            executor.migrate([("finanzas", latest)])
+
+
 class Phase3TestHardeningTests(TestCase):
     """Tests for PHASE 3 Test Hardening — T-01 through T-07."""
 
@@ -1317,144 +1517,9 @@ class Phase3TestHardeningTests(TestCase):
         with self.assertRaises(JournalEntry.DoesNotExist):
             JournalEntry.objects.get(pk=entry2.pk, user=self.user)
 
-    # T-02: Concurrency tests (skipped on SQLite due to locking limitations)
-    @unittest.skipIf(
-        connection.vendor == "sqlite",
-        "SQLite does not support concurrent writes; test requires PostgreSQL"
-    )
-    def test_recurring_concurrent_execution(self):
-        """T-02: Concurrent recurring execution should be safe with select_for_update."""
-        from threading import Thread
-        import time
-
-        recurring = RecurringPayment.objects.create(
-            user=self.user,
-            name="Concurrent Recurring",
-            account=self.checking,
-            category=self.expense_category,
-            amount=Decimal("10.00"),
-            next_due_date=timezone.localdate(),
-            auto_create_transaction=True,
-        )
-
-        errors = []
-
-        def run_recurring():
-            try:
-                execute_due_recurrings_for_user(self.user, run_date=timezone.localdate())
-            except Exception as e:
-                errors.append(e)
-
-        # Run concurrent executions
-        threads = [Thread(target=run_recurring) for _ in range(3)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        self.assertEqual(len(errors), 0, f"Concurrent execution errors: {errors}")
-
-        # Should have created exactly one transaction per cycle (idempotent)
-        txs = FinancialTransaction.objects.filter(user=self.user, source_recurring=recurring)
-        # With max_cycles=12 default, but run_date only one cycle ahead, so 1 transaction
-        self.assertLessEqual(txs.count(), 1)
-
-    @unittest.skipIf(
-        connection.vendor == "sqlite",
-        "SQLite does not support concurrent writes; test requires PostgreSQL"
-    )
-    def test_rebuild_concurrent(self):
-        """T-02: Two concurrent rebuilds should produce consistent results."""
-        from threading import Thread
-
-        # Create some transactions
-        for i in range(20):
-            FinancialTransaction.objects.create(
-                user=self.user,
-                account=self.checking,
-                category=self.expense_category,
-                transaction_type=FinancialTransaction.TransactionType.EXPENSE,
-                description=f"Expense {i}",
-                amount=Decimal("10.00"),
-                date=timezone.localdate(),
-                status=FinancialTransaction.Status.CLEARED,
-            )
-
-        errors = []
-        results = []
-
-        def rebuild():
-            try:
-                rebuild_account_balances(self.user)
-                self.checking.refresh_from_db()
-                results.append(self.checking.current_balance)
-            except Exception as e:
-                errors.append(e)
-
-        threads = [Thread(target=rebuild) for _ in range(5)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        self.assertEqual(len(errors), 0, f"Concurrent rebuild errors: {errors}")
-        # All rebuilds should produce the same balance
-        self.assertEqual(len(set(results)), 1, f"Inconsistent balances: {results}")
-        expected = Decimal("1000.00") - Decimal("200.00")
-        self.assertEqual(results[0], expected)
-
-    @unittest.skipIf(
-        connection.vendor == "sqlite",
-        "SQLite does not support concurrent writes; test requires PostgreSQL"
-    )
-    def test_transaction_concurrent_create_edit(self):
-        """T-02: Concurrent transaction create/edit should maintain balance consistency."""
-        from threading import Thread
-
-        errors = []
-        balances = []
-
-        def create_tx():
-            try:
-                with transaction.atomic():
-                    FinancialTransaction.objects.create(
-                        user=self.user,
-                        account=self.checking,
-                        category=self.expense_category,
-                        transaction_type=FinancialTransaction.TransactionType.EXPENSE,
-                        description="Concurrent create",
-                        amount=Decimal("5.00"),
-                        date=timezone.localdate(),
-                        status=FinancialTransaction.Status.CLEARED,
-                    )
-            except Exception as e:
-                errors.append(e)
-
-        def edit_tx():
-            try:
-                tx = FinancialTransaction.objects.create(
-                    user=self.user,
-                    account=self.checking,
-                    category=self.expense_category,
-                    transaction_type=FinancialTransaction.TransactionType.EXPENSE,
-                    description="To edit",
-                    amount=Decimal("20.00"),
-                    date=timezone.localdate(),
-                    status=FinancialTransaction.Status.CLEARED,
-                )
-                tx.amount = Decimal("25.00")
-                tx.save()
-                rebuild_account_balances(self.user, force_account_ids=[self.checking.id])
-            except Exception as e:
-                errors.append(e)
-
-        threads = [Thread(target=create_tx) for _ in range(3)] + [Thread(target=edit_tx) for _ in range(2)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        self.assertEqual(len(errors), 0, f"Concurrent tx errors: {errors}")
+    # T-02 concurrency tests and the T-06 migration reversibility test need
+    # committed data / no wrapping transaction, so they live in
+    # ``Phase3PostgresIntegrationTests`` (a TransactionTestCase) below.
 
     # T-03: Monetary edge cases
     def test_rounding_edge_cases(self):
@@ -1698,33 +1763,8 @@ class Phase3TestHardeningTests(TestCase):
         demo_features = edition_features("demo")
         self.assertEqual(unknown_features, demo_features)
 
-    # T-06: Migration tests (django-test-migrations integration)
-    @unittest.skipIf(
-        connection.vendor == "sqlite",
-        "SQLite schema editor doesn't support FK constraints in transactions; test requires PostgreSQL"
-    )
-    def test_migrations_forward_backward(self):
-        """T-06: All migrations should be reversible (PostgreSQL only)."""
-        from django.db import connection
-        from django.db.migrations.executor import MigrationExecutor
-        from django.db.migrations.recorder import MigrationRecorder
-
-        executor = MigrationExecutor(connection)
-        recorder = MigrationRecorder(connection)
-
-        # Get all applied migrations for finanzas app
-        applied = recorder.applied_migrations()
-        finanzas_applied = [m for m in applied if m[0] == "finanzas"]
-
-        for app, name in finanzas_applied:
-            # Test forward migration
-            executor.migrate([(app, name)])
-            # Test backward migration (unapply)
-            if name != "0001_initial":
-                prev_migration = executor.loader.get_migration_by_prefix(app, name).dependencies[0][1]
-                executor.migrate([(app, prev_migration)])
-                # Re-apply
-                executor.migrate([(app, name)])
+    # T-06: test_migrations_forward_backward lives in
+    # ``Phase3PostgresIntegrationTests`` (TransactionTestCase) below.
 
     def test_no_missing_migrations(self):
         """T-06: No missing migrations detected."""

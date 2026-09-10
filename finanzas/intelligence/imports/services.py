@@ -382,7 +382,8 @@ _UPDATABLE = {
 def update_draft(draft, *, reviewer=None, account=None, destination_account=None,
                  suggested_category=None, **fields):
     draft = (
-        TransactionDraft.objects.select_for_update()
+        # Lock only the draft row (consistent with approve/reject).
+        TransactionDraft.objects.select_for_update(of=("self",))
         .select_related("account")
         .get(pk=draft.pk)
     )
@@ -444,7 +445,10 @@ def approve_draft(draft, *, reviewer, category=None, account=None,
     transaction and performs no further mutation.
     """
     locked = (
-        TransactionDraft.objects.select_for_update()
+        # ``of=("self",)`` locks only the draft row. Without it PostgreSQL
+        # rejects ``FOR UPDATE`` because ``select_related`` LEFT-joins the
+        # nullable ``destination_account`` / ``suggested_category`` relations.
+        TransactionDraft.objects.select_for_update(of=("self",))
         .select_related("account", "destination_account", "suggested_category")
         .get(pk=draft.pk)
     )

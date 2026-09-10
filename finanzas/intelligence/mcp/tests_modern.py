@@ -33,6 +33,19 @@ from django.test import TestCase, TransactionTestCase
 
 from finanzas.models import Account
 from finanzas.intelligence.mcp import server as mcp_server
+
+
+# Keys that select a non-SQLite backend. The stdio subprocess e2e tests always
+# run against their own throwaway SQLite database, so they must not inherit a
+# PostgreSQL configuration from a parent test run driven by DB_* env vars.
+_DB_OVERRIDE_ENV_KEYS = ("DB_ENGINE", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD")
+
+
+def _sqlite_subprocess_env(**overrides):
+    env = {k: v for k, v in os.environ.items() if k not in _DB_OVERRIDE_ENV_KEYS}
+    env["DJANGO_SETTINGS_MODULE"] = "config.settings"
+    env.update(overrides)
+    return env
 from finanzas.intelligence.mcp import tools as tool_registry
 from finanzas.intelligence.mcp.models import (
     MCPAccessToken,
@@ -392,8 +405,7 @@ class AuthBypassRemovedTests(TestCase):
         self.assertNotIn("allow_unauthenticated", src)
 
     def test_command_refuses_without_valid_token(self):
-        env = dict(os.environ)
-        env["DJANGO_SETTINGS_MODULE"] = "config.settings"
+        env = _sqlite_subprocess_env()
         env.pop("MONETA_MCP_TOKEN", None)
         proc = subprocess.run(
             [sys.executable, "manage.py", "moneta_mcp_stdio"],
@@ -412,9 +424,7 @@ class ModernStdioSubprocessTests(TransactionTestCase):
 
         tmpdir = tempfile.mkdtemp(prefix="moneta-mcp-e2e-")
         db_path = os.path.join(tmpdir, "e2e.sqlite3")
-        env = dict(os.environ)
-        env["DJANGO_SETTINGS_MODULE"] = "config.settings"
-        env["DB_NAME"] = db_path
+        env = _sqlite_subprocess_env(DB_NAME=db_path)
 
         setup = (
             "import django,os;"

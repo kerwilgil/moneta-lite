@@ -68,7 +68,9 @@ def _process_single_recurring(recurring, run_date, max_cycles=None):
 
     with transaction.atomic():
         recurring = (
-            RecurringPayment.objects.select_for_update()
+            # ``of=("self",)`` locks only the recurring row; PostgreSQL rejects
+            # ``FOR UPDATE`` over the nullable ``category`` LEFT join otherwise.
+            RecurringPayment.objects.select_for_update(of=("self",))
             .select_related("user", "account", "category")
             .get(pk=recurring.pk)
         )
