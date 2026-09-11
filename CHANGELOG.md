@@ -1,9 +1,8 @@
 # Changelog
 
-## [0.3.0] — Unreleased (Intelligence & Interoperability)
+## [0.3.0] — 2026-09-10 (Intelligence & Interoperability)
 
-_Release candidate. El `tag` y la GitHub Release se hacen tras la auditoría
-posterior a Phase 8._
+_Release estable validado tras la auditoría final posterior a Phase 8._
 
 ### Added
 
