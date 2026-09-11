@@ -27,7 +27,7 @@ python manage.py check --deploy
 ## ✅ Verificación
 
 ```text
-python manage.py test      → 172 passed, 6 skipped (Lite)
+python manage.py test      → 182 passed, 6 skipped (Lite, SQLite)
 python manage.py check     → 0 issues
 python manage.py secret_scan → limpio
 ```

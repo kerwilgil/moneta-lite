@@ -105,10 +105,28 @@ class MCPAccessToken(models.Model):
         """
         if not raw_token or not isinstance(raw_token, str):
             return None
-        token = cls.objects.filter(token_hash=hash_token(raw_token)).first()
+        token = cls.objects.select_related("user").filter(
+            token_hash=hash_token(raw_token),
+            enabled=True,
+            revoked_at__isnull=True,
+            user__is_active=True,
+        ).first()
         if token is None or not token.is_valid:
             return None
         return token
+
+    @classmethod
+    def refresh_valid(cls, token):
+        """Reload a cached transport credential and re-check its owner."""
+        if token is None or not getattr(token, "pk", None):
+            return None
+        return cls.objects.select_related("user").filter(
+            pk=token.pk,
+            token_hash=token.token_hash,
+            enabled=True,
+            revoked_at__isnull=True,
+            user__is_active=True,
+        ).first()
 
     # -- lifecycle -------------------------------------------------------- #
     def revoke(self):
@@ -122,7 +140,11 @@ class MCPAccessToken(models.Model):
 
     @property
     def is_valid(self) -> bool:
-        return bool(self.enabled and self.revoked_at is None)
+        return bool(
+            self.enabled
+            and self.revoked_at is None
+            and getattr(self.user, "is_active", False)
+        )
 
     @property
     def scope_list(self):
@@ -193,8 +215,8 @@ class MCPAuditEvent(models.Model):
             token=token,
             token_identifier=(token.safe_identifier if token else ""),
             transport=transport,
-            tool=tool,
-            scope=scope,
+            tool=str(tool or "")[:100],
+            scope=str(scope or "")[:20],
             result=result,
             duration_ms=duration_ms,
             object_reference=str(object_reference or "")[:100],

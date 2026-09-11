@@ -6,17 +6,35 @@ account balances and how Moneta creates Debe/Haber journal entries.
 
 from decimal import Decimal
 
-from django.db import models, transaction
+from django.db import connection, models, transaction
 
 from .models import Account, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine
 
 
 MANUAL_BALANCE_TYPES = {Account.AccountType.INVESTMENT}
+FINANCIAL_LOCK_NAMESPACE = 0x4D4F4E45  # "MONE", stable advisory-lock namespace.
 
 
 def _as_money(value):
     """Normalize nullable numeric values to two-decimal money Decimals."""
     return (value or Decimal("0.00")).quantize(Decimal("0.01"))
+
+
+def lock_financial_user(user):
+    """Serialize balance-affecting work for one user on PostgreSQL.
+
+    Callers must already be inside ``transaction.atomic``.  The two-key
+    transaction advisory lock is re-entrant, migration-free, and prevents
+    Account/CreditCard row-lock inversions across concurrent UI and import
+    flows.
+    """
+    if connection.vendor != "postgresql":
+        return
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT pg_advisory_xact_lock(%s, %s)",
+            [FINANCIAL_LOCK_NAMESPACE, int(user.pk)],
+        )
 
 
 def ensure_system_account(user, name, account_type):
@@ -81,6 +99,7 @@ def rebuild_account_balances(user, force_account_ids=None, chunk_size=1000):
 
     Uses iterator with chunking to avoid loading all transactions into memory.
     """
+    lock_financial_user(user)
     force_account_ids = set(force_account_ids or [])
 
     # Get accounts that need to be rebuilt
@@ -91,7 +110,17 @@ def rebuild_account_balances(user, force_account_ids=None, chunk_size=1000):
             models.Q(id__in=force_account_ids) |
             models.Q(account_type__in=[at for at in Account.AccountType if at not in MANUAL_BALANCE_TYPES])
         )
-    accounts = {account.id: account for account in accounts_to_rebuild_q}
+    # PostgreSQL's NO KEY UPDATE lock serializes rebuilds while remaining
+    # compatible with the key-share locks held by concurrent FK inserts.
+    # The ordered lock acquisition also prevents transfer/card deadlocks.
+    if connection.vendor == "postgresql":
+        accounts_to_rebuild_q = accounts_to_rebuild_q.select_for_update(
+            of=("self",), no_key=True
+        )
+    accounts = {
+        account.id: account
+        for account in accounts_to_rebuild_q.order_by("id")
+    }
     force_account_ids = set(force_account_ids or [])
 
     # First pass: find touched account IDs using iterator (memory efficient)

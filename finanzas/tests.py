@@ -1,5 +1,6 @@
 ﻿from datetime import date
 from decimal import Decimal
+import hashlib
 import os
 import subprocess
 import sys
@@ -648,6 +649,29 @@ class LiteEditionGateTests(TestCase):
             with self.subTest(route=route_name):
                 self.assertEqual(self.client.get(reverse(route_name)).status_code, 200)
 
+        expense_category = Category.objects.create(
+            user=self.user,
+            name="Gasto dashboard Lite",
+            category_type=Category.CategoryType.EXPENSE,
+        )
+        RecurringPayment.objects.create(
+            user=self.user, name="Recurrente exclusivo Pro",
+            account=self.checking, category=expense_category,
+            amount=Decimal("10.00"), next_due_date=date.today(),
+        )
+        RecurringPayment.objects.create(
+            user=self.user, name="Suscripcion visible Lite",
+            account=self.checking, category=expense_category,
+            amount=Decimal("12.00"), next_due_date=date.today(),
+            is_subscription=True,
+        )
+        dashboard_response = self.client.get(reverse("finanzas:dashboard"))
+        self.assertNotContains(dashboard_response, "Recurrente exclusivo Pro")
+        self.assertContains(dashboard_response, "Suscripcion visible Lite")
+        self.assertNotContains(dashboard_response, reverse("finanzas:recurring_list"))
+        self.assertNotContains(dashboard_response, reverse("finanzas:net_income"))
+        self.assertNotContains(dashboard_response, "Ingreso neto mensual")
+
         blocked_routes = [
             "finanzas:recurring_list",
             "finanzas:ledger",
@@ -775,7 +799,7 @@ class SecretKeyValidationTests(TestCase):
         env.setdefault("DJANGO_ALLOWED_HOSTS", "testserver")
         env.setdefault("MONETA_WEB_SETUP_ENABLED", "0")
         result = subprocess.run(
-            [sys.executable, "-c", "import django; django.setup(); from django.conf import settings; print('SECRET_KEY:', settings.SECRET_KEY[:10] + '...')"],
+            [sys.executable, "-c", "import hashlib; import django; django.setup(); from django.conf import settings; print('SECRET_KEY_SHA256:', hashlib.sha256(settings.SECRET_KEY.encode()).hexdigest())"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(__file__)),
@@ -791,7 +815,7 @@ class SecretKeyValidationTests(TestCase):
     def test_secret_key_missing_debug_true_generates_ephemeral(self):
         code, stdout, _ = self._run_settings_check({"DJANGO_DEBUG": "1", "DJANGO_SECRET_KEY": ""})
         self.assertEqual(code, 0)
-        self.assertIn("SECRET_KEY:", stdout)
+        self.assertIn("SECRET_KEY_SHA256:", stdout)
 
     def test_secret_key_known_default_rejected_debug_true(self):
         code, _, stderr = self._run_settings_check({"DJANGO_DEBUG": "1", "DJANGO_SECRET_KEY": "dev-only-change-me"})
@@ -825,20 +849,23 @@ class SecretKeyValidationTests(TestCase):
         valid_key = "a" * 50
         code, stdout, _ = self._run_settings_check({"DJANGO_DEBUG": "1", "DJANGO_SECRET_KEY": valid_key})
         self.assertEqual(code, 0)
-        self.assertIn(valid_key[:10], stdout)
+        self.assertIn(hashlib.sha256(valid_key.encode()).hexdigest(), stdout)
 
     def test_secret_key_valid_50_chars_accepted_debug_false(self):
         valid_key = "b" * 50
         code, stdout, _ = self._run_settings_check({"DJANGO_DEBUG": "0", "DJANGO_SECRET_KEY": valid_key})
         self.assertEqual(code, 0)
-        self.assertIn(valid_key[:10], stdout)
+        self.assertIn(hashlib.sha256(valid_key.encode()).hexdigest(), stdout)
 
     def test_secret_key_ephemeral_is_random_per_setup(self):
         keys = set()
         for _ in range(3):
             code, stdout, _ = self._run_settings_check({"DJANGO_DEBUG": "1", "DJANGO_SECRET_KEY": ""})
             self.assertEqual(code, 0)
-            key_line = [l for l in stdout.splitlines() if l.startswith("SECRET_KEY:")][0]
+            key_line = [
+                line for line in stdout.splitlines()
+                if line.startswith("SECRET_KEY_SHA256:")
+            ][0]
             keys.add(key_line)
         self.assertEqual(len(keys), 3)
 
@@ -1175,9 +1202,20 @@ class Phase3PostgresIntegrationTests(TransactionTestCase):
     )
     def test_transaction_concurrent_create_edit(self):
         """T-02: Concurrent create/edit should not corrupt balances."""
-        from threading import Thread
+        from threading import Barrier, Thread
 
         errors = []
+        barrier = Barrier(2)
+        existing = FinancialTransaction.objects.create(
+            user=self.user,
+            account=self.checking,
+            category=self.expense_category,
+            transaction_type=FinancialTransaction.TransactionType.EXPENSE,
+            description="To edit",
+            amount=Decimal("20.00"),
+            date=timezone.localdate(),
+            status=FinancialTransaction.Status.CLEARED,
+        )
 
         def create_tx():
             try:
@@ -1192,37 +1230,38 @@ class Phase3PostgresIntegrationTests(TransactionTestCase):
                         date=timezone.localdate(),
                         status=FinancialTransaction.Status.CLEARED,
                     )
+                    barrier.wait(timeout=10)
+                    rebuild_account_balances(
+                        self.user, force_account_ids=[self.checking.id]
+                    )
             except Exception as e:  # noqa: BLE001
                 errors.append(e)
 
         def edit_tx():
             try:
-                tx = FinancialTransaction.objects.create(
-                    user=self.user,
-                    account=self.checking,
-                    category=self.expense_category,
-                    transaction_type=FinancialTransaction.TransactionType.EXPENSE,
-                    description="To edit",
-                    amount=Decimal("20.00"),
-                    date=timezone.localdate(),
-                    status=FinancialTransaction.Status.CLEARED,
-                )
-                tx.amount = Decimal("25.00")
-                tx.save()
-                rebuild_account_balances(self.user, force_account_ids=[self.checking.id])
+                with transaction.atomic():
+                    tx = FinancialTransaction.objects.get(pk=existing.pk)
+                    tx.amount = Decimal("25.00")
+                    tx.save(update_fields=["amount"])
+                    barrier.wait(timeout=10)
+                    rebuild_account_balances(
+                        self.user, force_account_ids=[self.checking.id]
+                    )
             except Exception as e:  # noqa: BLE001
                 errors.append(e)
 
-        threads = (
-            [Thread(target=self._worker(create_tx)) for _ in range(3)]
-            + [Thread(target=self._worker(edit_tx)) for _ in range(2)]
-        )
+        threads = [
+            Thread(target=self._worker(create_tx)),
+            Thread(target=self._worker(edit_tx)),
+        ]
         for t in threads:
             t.start()
         for t in threads:
             t.join()
 
         self.assertEqual(len(errors), 0, f"Concurrent tx errors: {errors}")
+        self.checking.refresh_from_db()
+        self.assertEqual(self.checking.current_balance, Decimal("970.00"))
 
     @unittest.skipIf(
         connection.vendor == "sqlite",

@@ -1,53 +1,69 @@
 """Settings UI: Configuracion -> Integraciones -> Moneta MCP.
 
 Manages the lifecycle of :class:`MCPAccessToken` rows for the current user.
-The raw token is shown exactly once (kept in the session only until the next
-render of this page) and never stored in plaintext.
+The raw token is shown exactly once in the POST response and is never stored.
 """
 
 from __future__ import annotations
+
+import secrets
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
 from finanzas.intelligence.mcp.models import MCPAccessToken, VALID_SCOPES
 
-_SESSION_KEY = "mcp_raw_token"
+
+REVEAL_NONCE_SESSION_KEY = "mcp_reveal_nonce"
 
 
-def _pop_once(request):
-    data = request.session.pop(_SESSION_KEY, None)
-    if data:
-        request.session.modified = True
-    return data
+def _new_reveal_nonce(request):
+    nonce = secrets.token_urlsafe(32)
+    request.session[REVEAL_NONCE_SESSION_KEY] = nonce
+    return nonce
 
 
-@login_required
-def mcp_settings(request):
+def _consume_reveal_nonce(request):
+    expected = request.session.pop(REVEAL_NONCE_SESSION_KEY, "")
+    supplied = request.POST.get("reveal_nonce", "")
+    return bool(expected and supplied and secrets.compare_digest(expected, supplied))
+
+def _render_settings(request, revealed=None):
     tokens = MCPAccessToken.objects.filter(user=request.user).order_by("-created_at")
-    revealed = _pop_once(request)
     context = {
         "tokens": tokens,
         "revealed": revealed,
         "valid_scopes": VALID_SCOPES,
         "http_endpoint": request.build_absolute_uri("/mcp/"),
         "stdio_command": "python manage.py moneta_mcp_stdio",
+        "reveal_nonce": _new_reveal_nonce(request),
     }
     return render(request, "finanzas/mcp_settings.html", context)
 
 
 @login_required
+@never_cache
+def mcp_settings(request):
+    return _render_settings(request)
+
+
+@login_required
+@never_cache
 @require_http_methods(["POST"])
 def mcp_token_create(request):
+    if not _consume_reveal_nonce(request):
+        messages.error(request, _("Formulario expirado. Intenta de nuevo."))
+        return redirect(reverse("integrations:mcp"))
     name = (request.POST.get("name") or "").strip() or _("Token MCP")
     scopes = request.POST.getlist("scopes") or ["read"]
     scopes = [s for s in scopes if s in VALID_SCOPES] or ["read"]
     token, raw = MCPAccessToken.issue(request.user, name, scopes)
-    request.session[_SESSION_KEY] = {
+    revealed = {
         "raw": raw, "prefix": token.token_prefix, "name": token.name,
         "scopes": token.scope_list,
     }
@@ -55,22 +71,26 @@ def mcp_token_create(request):
         request,
         _("Token creado. Copialo ahora: no se volvera a mostrar."),
     )
-    return redirect(reverse("integrations:mcp"))
+    return _render_settings(request, revealed)
 
 
 @login_required
+@never_cache
 @require_http_methods(["POST"])
 def mcp_token_regenerate(request, pk):
+    if not _consume_reveal_nonce(request):
+        messages.error(request, _("Formulario expirado. Intenta de nuevo."))
+        return redirect(reverse("integrations:mcp"))
     old = get_object_or_404(MCPAccessToken, pk=pk, user=request.user)
     name, scopes = old.name, old.scope_list
     old.revoke()
     token, raw = MCPAccessToken.issue(request.user, name, scopes)
-    request.session[_SESSION_KEY] = {
+    revealed = {
         "raw": raw, "prefix": token.token_prefix, "name": token.name,
         "scopes": token.scope_list,
     }
     messages.success(request, _("Token regenerado. El anterior quedo revocado."))
-    return redirect(reverse("integrations:mcp"))
+    return _render_settings(request, revealed)
 
 
 @login_required

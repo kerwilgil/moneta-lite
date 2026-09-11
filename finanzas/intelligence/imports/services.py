@@ -74,7 +74,7 @@ def sanitize_raw_metadata(value):
 
     * must be a mapping (anything else -> ``{}``)
     * keys that look like credentials are redacted
-    * strings are truncated, structures are depth/þcount limited
+    * strings are truncated, structures are depth/count limited
     * total serialised size is capped (raises :class:`ValidationFailed`)
     """
     if value in (None, ""):

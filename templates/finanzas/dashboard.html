@@ -114,9 +114,9 @@
     <div class="panel-header">
         <div>
             <h2>{% if lang_code|slice:':2' == 'en' %}Upcoming commitments{% else %}Compromisos pr&oacute;ximos{% endif %}</h2>
-            <p>{% if lang_code|slice:':2' == 'en' %}Recurring items and subscriptions due soon.{% else %}Recurrentes y suscripciones por vencer pronto.{% endif %}</p>
+            <p>{% if features.recurring %}{% if lang_code|slice:':2' == 'en' %}Recurring items and subscriptions due soon.{% else %}Recurrentes y suscripciones por vencer pronto.{% endif %}{% else %}{% if lang_code|slice:':2' == 'en' %}Subscriptions due soon.{% else %}Suscripciones por vencer pronto.{% endif %}{% endif %}</p>
         </div>
-        <a class="btn btn-light btn-sm" href="{% url 'finanzas:recurring_list' %}">{% if lang_code|slice:':2' == 'en' %}Manage{% else %}Gestionar{% endif %}</a>
+        <a class="btn btn-light btn-sm" href="{% if features.recurring %}{% url 'finanzas:recurring_list' %}{% else %}{% url 'finanzas:subscription_list' %}{% endif %}">{% if lang_code|slice:':2' == 'en' %}Manage{% else %}Gestionar{% endif %}</a>
     </div>
     <div class="upcoming-grid">
         {% for payment in upcoming %}
@@ -135,14 +135,14 @@
             <div class="empty-state-rich empty-state-full">
                 <span class="empty-icon" aria-hidden="true">&#10003;</span>
                 <strong>{% if lang_code|slice:':2' == 'en' %}No upcoming commitments{% else %}Sin compromisos pr&oacute;ximos{% endif %}</strong>
-                <p>{% if lang_code|slice:':2' == 'en' %}You have no recurring or subscription payments due soon.{% else %}No tienes pagos recurrentes o suscripciones por vencer pronto.{% endif %}</p>
-                <a class="btn btn-light btn-sm" href="{% url 'finanzas:recurring_list' %}">{% if lang_code|slice:':2' == 'en' %}Manage recurring{% else %}Gestionar recurrentes{% endif %}</a>
+                <p>{% if features.recurring %}{% if lang_code|slice:':2' == 'en' %}You have no recurring or subscription payments due soon.{% else %}No tienes pagos recurrentes o suscripciones por vencer pronto.{% endif %}{% else %}{% if lang_code|slice:':2' == 'en' %}You have no subscriptions due soon.{% else %}No tienes suscripciones por vencer pronto.{% endif %}{% endif %}</p>
+                <a class="btn btn-light btn-sm" href="{% if features.recurring %}{% url 'finanzas:recurring_list' %}{% else %}{% url 'finanzas:subscription_list' %}{% endif %}">{% if features.recurring %}{% if lang_code|slice:':2' == 'en' %}Manage recurring{% else %}Gestionar recurrentes{% endif %}{% else %}{% if lang_code|slice:':2' == 'en' %}Manage subscriptions{% else %}Gestionar suscripciones{% endif %}{% endif %}</a>
             </div>
         {% endfor %}
     </div>
 </section>
 
-<section class="panel compact-panel net-income-panel">
+{% if features.net_income %}<section class="panel compact-panel net-income-panel">
     <div class="panel-header net-income-header">
         <div>
             <h2>{% if lang_code|slice:':2' == 'en' %}Monthly net income{% else %}Ingreso neto mensual{% endif %}</h2>
@@ -164,7 +164,7 @@
             <span>{% if lang_code|slice:':2' == 'en' %}Align salary, debt and recurring payments in one monthly decision point.{% else %}Alinea salario, deuda y pagos recurrentes en un solo punto de decisi&oacute;n mensual.{% endif %}</span>
         </article>
     </div>
-</section>
+</section>{% endif %}
 
 <section class="dashboard-grid secondary secondary-cluster">
     <article class="panel">

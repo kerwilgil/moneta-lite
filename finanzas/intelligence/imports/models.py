@@ -1,4 +1,4 @@
-"""Import Queue models for Moneta v0.3.
+"""Import Queue models for Moneta v0.3.0.
 
 The import flow is:
 

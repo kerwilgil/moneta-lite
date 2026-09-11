@@ -1,4 +1,4 @@
-"""AI provider foundation for Moneta v0.3.
+"""AI provider foundation for Moneta v0.3.0.
 
 This layer is **completely independent from MCP**.  It defines a narrow,
 advisory contract.  AI output is never authoritative: it may propose a category,

@@ -13,6 +13,7 @@ from django.core.cache import cache
 
 
 DEFAULT_LIMITS = {
+    "__all__": (120, 60),
     "default": (120, 60),
     "moneta.create_import_batch": (30, 60),
     "moneta.create_transaction_draft": (60, 60),
@@ -61,9 +62,19 @@ def check(user_id: int, tool: str) -> None:
         raise RateLimitExceeded(tool, max_calls, window)
 
 
+def should_audit_global_limit(user_id: int) -> bool:
+    """Return true once per global window so denied-call auditing stays bounded."""
+    _, window = limit_for("__all__")
+    bucket = int(time.time()) // window
+    key = f"mcp-rl-audit:{user_id}:{bucket}"
+    return cache.add(key, 1, timeout=window + 5)
+
+
 def reset(user_id: int, tool: str) -> None:
     """Test helper: clear every window for this user/tool pair."""
     now = int(time.time())
     _, window = limit_for(tool)
     for bucket in (now // window, now // window - 1, now // window + 1):
         cache.delete(f"mcp-rl:{user_id}:{tool}:{bucket}")
+        if tool == "__all__":
+            cache.delete(f"mcp-rl-audit:{user_id}:{bucket}")

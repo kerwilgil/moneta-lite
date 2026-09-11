@@ -27,6 +27,7 @@
     <h2 class="h5">{% trans "Generar token" %}</h2>
     <form method="post" action="{% url 'integrations:mcp_token_create' %}">
         {% csrf_token %}
+        <input type="hidden" name="reveal_nonce" value="{{ reveal_nonce }}">
         <div class="mb-3">
             <label for="id_name" class="form-label">{% trans "Nombre" %}</label>
             <input type="text" id="id_name" name="name" class="form-control" maxlength="100"
@@ -93,6 +94,7 @@
                         </form>
                         <form method="post" action="{% url 'integrations:mcp_token_regenerate' t.pk %}">
                             {% csrf_token %}
+                            <input type="hidden" name="reveal_nonce" value="{{ reveal_nonce }}">
                             <button type="submit" class="btn btn-sm btn-outline-secondary">{% trans "Regenerar" %}</button>
                         </form>
                         <form method="post" action="{% url 'integrations:mcp_token_revoke' t.pk %}">

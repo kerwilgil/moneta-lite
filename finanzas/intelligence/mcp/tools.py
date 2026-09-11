@@ -689,6 +689,16 @@ def execute(token, name, arguments, *, transport="", client_ip=None, user_agent=
             client_ip=client_ip, user_agent=user_agent,
         )
 
+    # Bound every authenticated request before lookup, scope checks, or any
+    # database-backed audit write.  A single sampled event records saturation
+    # without turning rejected traffic into an unbounded write primitive.
+    try:
+        ratelimit.check(user.id, "__all__")
+    except ratelimit.RateLimitExceeded as exc:
+        if ratelimit.should_audit_global_limit(user.id):
+            _audit(MCPAuditEvent.Result.DENIED, error_code="rate_limited")
+        raise RateLimited(str(exc)) from exc
+
     if spec is None:
         _audit(MCPAuditEvent.Result.DENIED, error_code="tool_not_found")
         raise ToolNotFound(f"Herramienta desconocida: {name}")

@@ -27,6 +27,7 @@ from .accounting import (
     delete_invoice_journal,
     delete_transaction_journal,
     get_transaction_system_accounts,
+    lock_financial_user,
     rebuild_account_balances,
     sync_credit_card_account_balance,
     sync_invoice_journal,
@@ -44,9 +45,8 @@ from .forms import (
     RecurringPaymentForm,
     TransactionForm,
 )
-from django.utils.translation import gettext as _, gettext_lazy as _l
 from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine, RecurringPayment, SetupState
-from .product import require_feature
+from .product import feature_enabled, require_feature
 from .security import is_login_locked
 from .services import advice_for_user, dashboard_summary, monthly_cash_flow_series
 
@@ -55,63 +55,58 @@ LIST_PAGE_SIZE = 100
 EXPORT_ROW_LIMIT = 5000
 
 
-LIST_PAGE_SIZE = 100
-EXPORT_ROW_LIMIT = 5000
-
-
-# Type labels - using gettext_lazy for translations
 TX_TYPE_LABELS = {
-    FinancialTransaction.TransactionType.INCOME: _l("Income"),
-    FinancialTransaction.TransactionType.EXPENSE: _l("Expense"),
-    FinancialTransaction.TransactionType.TRANSFER: _l("Transfer"),
-    FinancialTransaction.TransactionType.CARD_PAYMENT: _l("Card payment"),
-    FinancialTransaction.TransactionType.COLLECTION: _l("Collection"),
+    FinancialTransaction.TransactionType.INCOME: {"es": "Ingreso", "en": "Income"},
+    FinancialTransaction.TransactionType.EXPENSE: {"es": "Gasto", "en": "Expense"},
+    FinancialTransaction.TransactionType.TRANSFER: {"es": "Transferencia", "en": "Transfer"},
+    FinancialTransaction.TransactionType.CARD_PAYMENT: {"es": "Pago de tarjeta", "en": "Card payment"},
+    FinancialTransaction.TransactionType.COLLECTION: {"es": "Cobro", "en": "Collection"},
 }
 
 TX_STATUS_LABELS = {
-    FinancialTransaction.Status.PENDING: _l("Pending"),
-    FinancialTransaction.Status.CLEARED: _l("Cleared"),
-    FinancialTransaction.Status.VOID: _l("Voided"),
+    FinancialTransaction.Status.PENDING: {"es": "Pendiente", "en": "Pending"},
+    FinancialTransaction.Status.CLEARED: {"es": "Confirmado", "en": "Cleared"},
+    FinancialTransaction.Status.VOID: {"es": "Anulado", "en": "Voided"},
 }
 
 INVOICE_TYPE_LABELS = {
-    Invoice.InvoiceType.ISSUED: _l("Issued"),
-    Invoice.InvoiceType.RECEIVED: _l("Received"),
+    Invoice.InvoiceType.ISSUED: {"es": "Emitida", "en": "Issued"},
+    Invoice.InvoiceType.RECEIVED: {"es": "Recibida", "en": "Received"},
 }
 
 INVOICE_STATUS_LABELS = {
-    Invoice.Status.DRAFT: _l("Draft"),
-    Invoice.Status.PENDING: _l("Pending"),
-    Invoice.Status.PAID: _l("Paid"),
-    Invoice.Status.OVERDUE: _l("Overdue"),
-    Invoice.Status.VOID: _l("Voided"),
+    Invoice.Status.DRAFT: {"es": "Borrador", "en": "Draft"},
+    Invoice.Status.PENDING: {"es": "Pendiente", "en": "Pending"},
+    Invoice.Status.PAID: {"es": "Pagada", "en": "Paid"},
+    Invoice.Status.OVERDUE: {"es": "Vencida", "en": "Overdue"},
+    Invoice.Status.VOID: {"es": "Anulada", "en": "Voided"},
 }
 
 FREQUENCY_LABELS = {
-    RecurringPayment.Frequency.WEEKLY: _l("Weekly"),
-    RecurringPayment.Frequency.BIWEEKLY: _l("Biweekly"),
-    RecurringPayment.Frequency.MONTHLY: _l("Monthly"),
-    RecurringPayment.Frequency.QUARTERLY: _l("Quarterly"),
-    RecurringPayment.Frequency.YEARLY: _l("Yearly"),
+    RecurringPayment.Frequency.WEEKLY: {"es": "Semanal", "en": "Weekly"},
+    RecurringPayment.Frequency.BIWEEKLY: {"es": "Quincenal", "en": "Biweekly"},
+    RecurringPayment.Frequency.MONTHLY: {"es": "Mensual", "en": "Monthly"},
+    RecurringPayment.Frequency.QUARTERLY: {"es": "Trimestral", "en": "Quarterly"},
+    RecurringPayment.Frequency.YEARLY: {"es": "Anual", "en": "Yearly"},
 }
 
 EXECUTION_STATUS_LABELS = {
-    RecurringPayment.ExecutionStatus.SUCCESS: _l("Success"),
-    RecurringPayment.ExecutionStatus.SKIPPED: _l("No changes"),
-    RecurringPayment.ExecutionStatus.ERROR: _l("Error"),
+    RecurringPayment.ExecutionStatus.SUCCESS: {"es": "Correcto", "en": "Success"},
+    RecurringPayment.ExecutionStatus.SKIPPED: {"es": "Sin cambios", "en": "No changes"},
+    RecurringPayment.ExecutionStatus.ERROR: {"es": "Error", "en": "Error"},
 }
 
 ACCOUNT_TYPE_LABELS = {
-    Account.AccountType.CASH: _l("Cash"),
-    Account.AccountType.CHECKING: _l("Checking"),
-    Account.AccountType.BANK: _l("Bank"),
-    Account.AccountType.SAVINGS: _l("Savings"),
-    Account.AccountType.INVESTMENT: _l("Investment"),
-    Account.AccountType.CREDIT_CARD: _l("Credit card"),
-    Account.AccountType.LOAN: _l("Loan"),
-    Account.AccountType.RECEIVABLE: _l("Receivable"),
-    Account.AccountType.PAYABLE: _l("Payable"),
-    Account.AccountType.CAPITAL: _l("Capital"),
+    Account.AccountType.CASH: {"es": "Efectivo", "en": "Cash"},
+    Account.AccountType.CHECKING: {"es": "Cuenta corriente", "en": "Checking"},
+    Account.AccountType.BANK: {"es": "Banco", "en": "Bank"},
+    Account.AccountType.SAVINGS: {"es": "Ahorro", "en": "Savings"},
+    Account.AccountType.INVESTMENT: {"es": "Inversión", "en": "Investment"},
+    Account.AccountType.CREDIT_CARD: {"es": "Tarjeta de crédito", "en": "Credit card"},
+    Account.AccountType.LOAN: {"es": "Préstamo", "en": "Loan"},
+    Account.AccountType.RECEIVABLE: {"es": "Cuenta por cobrar", "en": "Receivable"},
+    Account.AccountType.PAYABLE: {"es": "Cuenta por pagar", "en": "Payable"},
+    Account.AccountType.CAPITAL: {"es": "Capital", "en": "Capital"},
 }
 
 ACCOUNT_TYPE_ICONS = {
@@ -128,27 +123,27 @@ ACCOUNT_TYPE_ICONS = {
 }
 
 CATEGORY_TYPE_LABELS = {
-    Category.CategoryType.INCOME: _l("Income"),
-    Category.CategoryType.EXPENSE: _l("Expense"),
-    Category.CategoryType.TRANSFER: _l("Transfer"),
+    Category.CategoryType.INCOME: {"es": "Ingreso", "en": "Income"},
+    Category.CategoryType.EXPENSE: {"es": "Gasto", "en": "Expense"},
+    Category.CategoryType.TRANSFER: {"es": "Transferencia", "en": "Transfer"},
 }
 
 ACCOUNT_NAME_LABELS = {
-    "Banco Principal": "Main Bank",
-    "Ahorro Emergencias": "Emergency Savings",
-    "Visa Personal": "Personal Visa",
+    "Banco Principal": {"en": "Main Bank"},
+    "Ahorro Emergencias": {"en": "Emergency Savings"},
+    "Visa Personal": {"en": "Personal Visa"},
 }
 
 CATEGORY_NAME_LABELS = {
-    "Nómina": "Payroll",
-    "Consultoría": "Consulting",
-    "Supermercado": "Groceries",
-    "Transporte": "Transport",
-    "Software": "Software",
-    "Entretenimiento": "Entertainment",
-    "Seguros": "Insurance",
-    "Salud": "Health",
-    "Educación": "Education",
+    "Nómina": {"en": "Payroll"},
+    "Consultoría": {"en": "Consulting"},
+    "Supermercado": {"en": "Groceries"},
+    "Transporte": {"en": "Transport"},
+    "Software": {"en": "Software"},
+    "Entretenimiento": {"en": "Entertainment"},
+    "Seguros": {"en": "Insurance"},
+    "Salud": {"en": "Health"},
+    "Educación": {"en": "Education"},
 }
 
 
@@ -157,24 +152,30 @@ def is_english(request):
 
 
 def localized_label(mapping, key, english=False, fallback=""):
-    """Legacy function - now uses gettext for translation."""
-    # This is kept for backward compatibility but should be phased out
-    # in favor of direct gettext usage in templates
-    return _(str(key))
+    labels = mapping.get(key)
+    if not labels:
+        return fallback or str(key)
+    return labels["en" if english else "es"]
 
 
 def localized_choices(choices, mapping, english=False):
-    """Legacy function - use gettext in templates instead."""
-    return [(value, _(str(value))) for value, label in choices]
+    return [(value, localized_label(mapping, value, english, fallback=label)) for value, label in choices]
 
 
 def localized_name(mapping, name, english=False):
+    if english:
+        return mapping.get(name, {}).get("en", name)
     return name
 
 
 def decorate_account(account, english=False):
-    account.display_name_ui = account.name
-    account.account_type_label_ui = _(account.get_account_type_display())
+    account.display_name_ui = localized_name(ACCOUNT_NAME_LABELS, account.name, english)
+    account.account_type_label_ui = localized_label(
+        ACCOUNT_TYPE_LABELS,
+        account.account_type,
+        english,
+        account.get_account_type_display(),
+    )
     account.account_type_icon_ui = ACCOUNT_TYPE_ICONS.get(account.account_type, "Cuenta")
     return account
 
@@ -186,6 +187,8 @@ def decorate_category(category, english=False):
 
 
 def decorate_budget_rows(rows, english=False):
+    for row in rows:
+        decorate_category(row.get("category"), english)
     return rows
 
 
@@ -226,7 +229,7 @@ def change_language(request):
     if language.startswith("en"):
         messages.success(request, "Language switched to English.")
     else:
-        messages.success(request, "Idioma cambiado a EspaÃ±ol.")
+        messages.success(request, "Idioma cambiado a Español.")
     return response
 
 
@@ -593,6 +596,7 @@ def save_user_form(
         if form.is_valid():
             try:
                 with transaction.atomic():
+                    lock_financial_user(request.user)
                     obj = form.save(commit=False)
                     if instance_mutator:
                         instance_mutator(obj)
@@ -651,6 +655,11 @@ def confirm_delete(request, instance, success_url, label):
 @login_required
 def dashboard(request):
     context = dashboard_summary(request.user)
+    if not feature_enabled("recurring"):
+        context["upcoming"] = [
+            payment for payment in context.get("upcoming", [])
+            if payment.is_subscription
+        ]
     context["advice"] = advice_for_user(request.user, context)
     english = is_english(request)
     context["cash_flow_series"] = monthly_cash_flow_series(request.user, english=english)
@@ -844,7 +853,7 @@ def transaction_edit(request, pk):
         "finanzas/form.html",
         "finanzas:transaction_list",
         "Editar movimiento",
-        "Actualiza valores y la contabilidad se recalcularÃ¡ automÃ¡ticamente.",
+        "Actualiza valores y la contabilidad se recalculará automáticamente.",
         "Guardar cambios",
         instance=instance,
         extra_context=category_helper_context(),
@@ -891,7 +900,7 @@ def account_create(request):
         "finanzas/form.html",
         "finanzas:settings",
         "Nueva cuenta",
-        "Agrega bancos, efectivo, tarjetas, prÃ©stamos, inversiones o capital.",
+        "Agrega bancos, efectivo, tarjetas, préstamos, inversiones o capital.",
         "Guardar cuenta",
         after_save=lambda obj: (sync_credit_card_account_balance(obj), rebuild_account_balances(request.user, force_account_ids=[obj.id])),
     )
@@ -928,7 +937,7 @@ def category_create(request):
         "finanzas/form.html",
         "finanzas:settings",
         "Nueva categoria",
-        "Organiza ingresos, gastos y transferencias con lÃ­mites mensuales.",
+        "Organiza ingresos, gastos y transferencias con límites mensuales.",
         "Guardar categoria",
     )
 
@@ -952,7 +961,7 @@ def category_edit(request, pk):
 @require_http_methods(["GET", "POST"])
 def category_delete(request, pk):
     instance = get_object_or_404(Category, pk=pk, user=request.user)
-    return confirm_delete(request, instance, "finanzas:settings", "CategorÃ­a")
+    return confirm_delete(request, instance, "finanzas:settings", "Categoría")
 
 
 @login_required
@@ -1261,9 +1270,9 @@ def subscription_create(request):
         RecurringPaymentForm,
         "finanzas/form.html",
         "finanzas:subscription_list",
-        "Nueva suscripciÃ³n",
+        "Nueva suscripción",
         "Registra servicios, afiliaciones y cargos automaticos.",
-        "Guardar suscripciÃ³n",
+        "Guardar suscripción",
         extra_context=category_helper_context(),
         instance_mutator=lambda obj: apply_subscription_policy(obj, preset_key),
         initial_data=initial_data,
@@ -1290,7 +1299,7 @@ def subscription_edit(request, pk):
         RecurringPaymentForm,
         "finanzas/form.html",
         "finanzas:subscription_list",
-        "Editar suscripciÃ³n",
+        "Editar suscripción",
         "Actualiza monto, fecha o estado del servicio.",
         "Guardar cambios",
         instance=instance,
@@ -1315,7 +1324,7 @@ def subscription_run_now(request):
     messages.success(
         request,
         (
-            f"EjecuciÃ³n suscripciones: procesados {stats['processed']}, "
+            f"Ejecución suscripciones: procesados {stats['processed']}, "
             f"creados {stats['created_transactions']}, omitidos {stats['skipped_transactions']}, "
             f"errores {stats['errors']}."
         ),
@@ -1342,7 +1351,7 @@ def credit_card_create(request):
         "Configura limite, deuda, tasa y fechas de pago.",
         "Guardar tarjeta",
         extra_context={
-            "helper_note": "Primero crea una cuenta de tipo Tarjeta de crÃ©dito si no aparece ninguna opciÃ³n.",
+            "helper_note": "Primero crea una cuenta de tipo Tarjeta de crédito si no aparece ninguna opción.",
             "helper_url": "finanzas:account_create",
             "helper_label": "Crear cuenta de tarjeta",
         },

@@ -80,7 +80,9 @@ async def _resolve_token(ctx):
     request's ``Authorization`` header (Streamable HTTP transport)."""
     token = get_current_token()
     if token is not None:
-        return token
+        return await sync_to_async(
+            MCPAccessToken.refresh_valid, thread_sensitive=True
+        )(token)
     raw = _bearer_from_request(getattr(ctx, "request", None))
     if not raw:
         return None

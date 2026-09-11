@@ -8,6 +8,7 @@ import json
 import os
 import sys
 from decimal import Decimal
+from types import SimpleNamespace
 
 from asgiref.sync import async_to_sync
 from django.contrib.auth import get_user_model
@@ -18,7 +19,7 @@ from django.urls import reverse
 from finanzas.models import Account, Category, FinancialTransaction
 from finanzas.intelligence.imports import services as import_services
 from finanzas.intelligence.imports.models import TransactionDraft
-from finanzas.intelligence.mcp import ratelimit, tools
+from finanzas.intelligence.mcp import ratelimit, server as mcp_server, tools
 from finanzas.intelligence.mcp.models import (
     MCPAccessToken,
     MCPAuditEvent,
@@ -91,6 +92,16 @@ class TokenAuthTests(McpBase):
     def test_disabled_token(self):
         self.assertIsNone(MCPAccessToken.resolve(self.disabled_raw))
 
+        self.user.is_active = False
+        self.user.save(update_fields=["is_active"])
+        self.assertIsNone(MCPAccessToken.resolve(self.read_raw))
+        reset_token = mcp_server.set_current_token(self.read_token_obj)
+        try:
+            ctx = SimpleNamespace(request=None)
+            self.assertIsNone(async_to_sync(mcp_server._resolve_token)(ctx))
+        finally:
+            mcp_server._current_token.reset(reset_token)
+
     def test_valid_token(self):
         self.assertEqual(MCPAccessToken.resolve(self.read_raw).pk, self.read_token_obj.pk)
 
@@ -104,6 +115,59 @@ class TokenAuthTests(McpBase):
         for tok in MCPAccessToken.objects.all():
             self.assertNotIn(self.read_raw, tok.token_hash)
             self.assertNotEqual(tok.token_hash, self.read_raw)
+
+        self.client.force_login(self.user)
+        settings_response = self.client.get(reverse("integrations:mcp"))
+        create_nonce = settings_response.context["reveal_nonce"]
+        response = self.client.post(
+            reverse("integrations:mcp_token_create"),
+            {
+                "name": "one-time",
+                "scopes": [SCOPE_READ],
+                "reveal_nonce": create_nonce,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        raw = response.context["revealed"]["raw"]
+        self.assertContains(response, raw)
+        self.assertNotIn("mcp_raw_token", self.client.session)
+        self.assertNotContains(self.client.get(reverse("integrations:mcp")), raw)
+
+        replay = self.client.post(
+            reverse("integrations:mcp_token_create"),
+            {
+                "name": "one-time-replay",
+                "scopes": [SCOPE_READ],
+                "reveal_nonce": create_nonce,
+            },
+        )
+        self.assertEqual(replay.status_code, 302)
+        self.assertFalse(MCPAccessToken.objects.filter(name="one-time-replay").exists())
+
+        token = MCPAccessToken.objects.get(name="one-time")
+        regenerate_nonce = self.client.get(
+            reverse("integrations:mcp")
+        ).context["reveal_nonce"]
+        response = self.client.post(
+            reverse("integrations:mcp_token_regenerate", args=[token.pk]),
+            {"reveal_nonce": regenerate_nonce},
+        )
+        self.assertEqual(response.status_code, 200)
+        regenerated_raw = response.context["revealed"]["raw"]
+        self.assertContains(response, regenerated_raw)
+        self.assertNotIn("mcp_raw_token", self.client.session)
+        self.assertNotContains(
+            self.client.get(reverse("integrations:mcp")), regenerated_raw
+        )
+        replay = self.client.post(
+            reverse("integrations:mcp_token_regenerate", args=[token.pk]),
+            {"reveal_nonce": regenerate_nonce},
+        )
+        self.assertEqual(replay.status_code, 302)
+        self.assertEqual(
+            MCPAccessToken.objects.filter(name="one-time", enabled=True).count(),
+            1,
+        )
 
     def test_revoke_updates_flags(self):
         obj, raw = MCPAccessToken.issue(self.user, "x", [SCOPE_READ])
@@ -205,8 +269,26 @@ class InputValidationTests(McpBase):
                           {"transaction_type": "bogus"})
 
     def test_unknown_tool(self):
-        with self.assertRaises(tools.ToolNotFound):
-            tools.execute(self.read_token_obj, "moneta.delete_everything", {})
+        with self.settings(MONETA_MCP_RATE_LIMITS={
+            "__all__": (2, 60), "default": (1000, 60)
+        }):
+            ratelimit.reset(self.user.id, "__all__")
+            before = MCPAuditEvent.objects.count()
+            errors = []
+            for index in range(6):
+                try:
+                    tools.execute(
+                        self.read_token_obj,
+                        f"moneta.unknown_{index}_" + ("x" * 120),
+                        {},
+                    )
+                except tools.MCPToolError as exc:
+                    errors.append(exc)
+            self.assertEqual(len(errors), 6)
+            self.assertLessEqual(MCPAuditEvent.objects.count() - before, 3)
+            self.assertTrue(
+                all(len(event.tool) <= 100 for event in MCPAuditEvent.objects.all())
+            )
 
 
 # --------------------------------------------------------------------------- #
