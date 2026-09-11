@@ -15,7 +15,7 @@
     <img alt="License" src="https://img.shields.io/badge/License-MIT-c9a227?style=flat-square">
   </p>
 
-  <img src="docs/screenshots/dashboard-light.jpg" alt="Panel financiero de Moneta Lite" width="820">
+  <img src="docs/screenshots/dashboard-dark.jpg" alt="MONETA Dashboard — Self-hosted personal finance manager" width="960">
 </div>
 
 ---
@@ -63,7 +63,7 @@ Detalle: [`CHANGELOG.md`](CHANGELOG.md) · [`docs/release-notes/v0.3.0.md`](docs
 
 - [Novedades de v0.3.0](#novedades-de-v030)
 - [Funcionalidades](#funcionalidades)
-- [Capturas](#capturas)
+- [MONETA en acción](#moneta-en-acción)
 - [Inicio rápido (SQLite)](#inicio-rápido-sqlite)
 - [Requisitos](#requisitos)
 - [Instalación](#instalación)
@@ -118,25 +118,20 @@ Detalle: [`CHANGELOG.md`](CHANGELOG.md) · [`docs/release-notes/v0.3.0.md`](docs
 > suscripciones, libro contable, ingreso neto ni exportaciones avanzadas. Esos
 > módulos están en Moneta Pro — ver [Lite vs Pro](#lite-vs-pro).
 
-## Capturas
+## MONETA en acción
 
-| Panel financiero (claro) | Panel financiero (oscuro) |
-|---|---|
-| ![Dashboard claro](docs/screenshots/dashboard-light.jpg) | ![Dashboard oscuro](docs/screenshots/dashboard-dark.jpg) |
+<p align="center">
+  <img src="docs/screenshots/dashboard-light.jpg" width="49%" alt="Dashboard financiero de MONETA en tema claro">
+  <img src="docs/screenshots/import-queue.jpg" width="49%" alt="Cola de importaciones de MONETA con revisión humana">
+</p>
 
-| Movimientos | Tarjetas de crédito |
-|---|---|
-| ![Movimientos](docs/screenshots/transactions.jpg) | ![Tarjetas](docs/screenshots/credit-cards.jpg) |
+<p align="center">
+  <img src="docs/screenshots/mcp-settings.jpg" width="49%" alt="Configuración MCP de MONETA para agentes de IA">
+  <img src="docs/screenshots/reports.jpg" width="49%" alt="Reportes y análisis de finanzas personales en MONETA">
+</p>
 
-| Suscripciones | Reportes |
-|---|---|
-| ![Suscripciones](docs/screenshots/subscriptions.jpg) | ![Reportes](docs/screenshots/reports.jpg) |
-
-| Cola de importaciones | Integraciones · Moneta MCP |
-|---|---|
-| ![Cola de importaciones](docs/screenshots/import-queue.jpg) | ![Ajustes MCP](docs/screenshots/mcp-settings.jpg) |
-
-_Todas las capturas usan datos de demostración ficticios._
+_Todas las capturas usan datos de demostración ficticios. Las vistas de movimientos,
+tarjetas y suscripciones también están disponibles en [`docs/screenshots/`](docs/screenshots/)._
 
 ## Inicio rápido (SQLite)
 
