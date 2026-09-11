@@ -27,15 +27,16 @@
     <link rel="apple-touch-icon" href="{% static product.favicon %}">
     <script src="{% static 'js/theme-init.js' %}"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ product.version }}">
 </head>
 <body>
 {% with active=request.resolver_match.url_name lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
-<a class="skip-link" href="#main-content">{% if lang_code|slice:':2' == 'en' %}Skip to main content{% else %}Saltar al contenido principal{% endif %}</a>
+{% load i18n %}
+<a class="skip-link" href="#main-content">{% trans "Saltar al contenido principal" %}</a>
 <div class="app-shell">
     <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
     <aside class="sidebar" id="app-sidebar">
-        <a class="brand" href="{% url 'finanzas:dashboard' %}" aria-label="{{ product.name }} - Ir al inicio">
+        <a class="brand" href="{% url 'finanzas:dashboard' %}" aria-label="{{ product.name }} - {% trans 'Ir al inicio' %}">
             <span class="brand-mark">
                 <img class="brand-logo brand-logo-light" src="{% static product.logo_light %}" alt="{{ product.name }}" loading="lazy">
                 <img class="brand-logo brand-logo-dark" src="{% static product.logo_dark %}" alt="{{ product.name }}" loading="lazy">
@@ -44,66 +45,68 @@
             <span class="brand-title">{{ product.name }}</span>
         </a>
 
-        <form class="search-box" role="search" method="get" action="{% url 'finanzas:transaction_list' %}">
+        <form class="search-box d-none d-md-block" role="search" method="get" action="{% url 'finanzas:transaction_list' %}">
             <span class="search-icon" aria-hidden="true"></span>
-            <input type="search" name="q" placeholder="{% if lang_code|slice:':2' == 'en' %}Search transactions, contact or note{% else %}Buscar movimientos, contacto o nota{% endif %}" aria-label="{% if lang_code|slice:':2' == 'en' %}Search{% else %}Buscar{% endif %}">
-            <button type="submit">{% if lang_code|slice:':2' == 'en' %}Go{% else %}Ir{% endif %}</button>
+            <input type="search" name="q" placeholder="{% trans 'Buscar movimientos, contacto o nota' %}" aria-label="{% trans 'Buscar' %}">
+            <button type="submit">{% trans 'Ir' %}</button>
         </form>
 
-        <p class="nav-label" id="nav-label-main">{% if lang_code|slice:':2' == 'en' %}Main Menu{% else %}Menu principal{% endif %}</p>
+        <p class="nav-label" id="nav-label-main">{% trans 'Menú principal' %}</p>
         <nav class="nav flex-column side-nav" aria-labelledby="nav-label-main">
-            <a class="nav-link {% if active == 'dashboard' %}active{% endif %}" href="{% url 'finanzas:dashboard' %}" {% if active == 'dashboard' %}aria-current="page"{% endif %} aria-label="Dashboard"><span class="nav-icon nav-icon-dashboard" aria-hidden="true"><span></span></span><span>Dashboard</span></a>
-            {% if features.reports %}<a class="nav-link {% if active == 'reports' %}active{% endif %}" href="{% url 'finanzas:reports' %}" {% if active == 'reports' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Analytics{% else %}Analisis{% endif %}"><span class="nav-icon nav-icon-analytics" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Analytics{% else %}Analisis{% endif %}</span></a>{% endif %}
-            {% if features.transactions %}<a class="nav-link {% if active == 'transaction_list' %}active{% endif %}" href="{% url 'finanzas:transaction_list' %}" {% if active == 'transaction_list' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Transactions{% else %}Movimientos{% endif %}"><span class="nav-icon nav-icon-transactions" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Transactions{% else %}Movimientos{% endif %}</span></a>{% endif %}
-            {% if features.invoices %}<a class="nav-link {% if active == 'invoice_list' %}active{% endif %}" href="{% url 'finanzas:invoice_list' %}" {% if active == 'invoice_list' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Invoices{% else %}Facturas{% endif %}"><span class="nav-icon nav-icon-invoices" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Invoices{% else %}Facturas{% endif %}</span></a>{% endif %}
+            <a class="nav-link {% if active == 'dashboard' %}active{% endif %}" href="{% url 'finanzas:dashboard' %}" {% if active == 'dashboard' %}aria-current="page"{% endif %} aria-label="{% trans 'Dashboard' %}"><span class="nav-icon nav-icon-dashboard" aria-hidden="true"><span></span></span><span>{% trans 'Dashboard' %}</span></a>
+            {% if features.reports %}<a class="nav-link {% if active == 'reports' %}active{% endif %}" href="{% url 'finanzas:reports' %}" {% if active == 'reports' %}aria-current="page"{% endif %} aria-label="{% trans 'Análisis' %}"><span class="nav-icon nav-icon-analytics" aria-hidden="true"><span></span></span><span>{% trans 'Análisis' %}</span></a>{% endif %}
+            {% if features.transactions %}<a class="nav-link {% if active == 'transaction_list' %}active{% endif %}" href="{% url 'finanzas:transaction_list' %}" {% if active == 'transaction_list' %}aria-current="page"{% endif %} aria-label="{% trans 'Movimientos' %}"><span class="nav-icon nav-icon-transactions" aria-hidden="true"><span></span></span><span>{% trans 'Movimientos' %}</span></a>{% endif %}
+            {% if features.transactions %}<a class="nav-link {% if active == 'import_queue' %}active{% endif %}" href="{% url 'imports:import_queue' %}" {% if active == 'import_queue' %}aria-current="page"{% endif %} aria-label="{% trans 'Importaciones' %}"><span class="nav-icon nav-icon-transactions" aria-hidden="true"><span></span></span><span>{% trans 'Importaciones' %}</span></a>{% endif %}
+            {% if features.invoices %}<a class="nav-link {% if active == 'invoice_list' %}active{% endif %}" href="{% url 'finanzas:invoice_list' %}" {% if active == 'invoice_list' %}aria-current="page"{% endif %} aria-label="{% trans 'Facturas' %}"><span class="nav-icon nav-icon-invoices" aria-hidden="true"><span></span></span><span>{% trans 'Facturas' %}</span></a>{% endif %}
         </nav>
 
         {% if features.recurring or features.net_income or features.subscriptions or features.credit_cards or features.ledger %}
-        <p class="nav-label" id="nav-label-ops">{% if lang_code|slice:':2' == 'en' %}Operations{% else %}Operaciones{% endif %}</p>
+        <p class="nav-label" id="nav-label-ops">{% trans 'Operaciones' %}</p>
         <nav class="nav flex-column side-nav" aria-labelledby="nav-label-ops">
-            {% if features.recurring %}<a class="nav-link {% if active == 'recurring_list' %}active{% endif %}" href="{% url 'finanzas:recurring_list' %}" {% if active == 'recurring_list' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Recurring{% else %}Recurrentes{% endif %}"><span class="nav-icon nav-icon-recurring" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Recurring{% else %}Recurrentes{% endif %}</span></a>{% endif %}
-            {% if features.net_income %}<a class="nav-link {% if active == 'net_income' %}active{% endif %}" href="{% url 'finanzas:net_income' %}" {% if active == 'net_income' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Net Income{% else %}Ingreso neto{% endif %}"><span class="nav-icon nav-icon-net-income" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Net Income{% else %}Ingreso neto{% endif %}</span></a>{% endif %}
-            {% if features.subscriptions %}<a class="nav-link {% if active == 'subscription_list' %}active{% endif %}" href="{% url 'finanzas:subscription_list' %}" {% if active == 'subscription_list' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Subscriptions{% else %}Suscripciones{% endif %}"><span class="nav-icon nav-icon-subscriptions" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Subscriptions{% else %}Suscripciones{% endif %}</span></a>{% endif %}
-            {% if features.credit_cards %}<a class="nav-link {% if active == 'credit_card_list' %}active{% endif %}" href="{% url 'finanzas:credit_card_list' %}" {% if active == 'credit_card_list' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Cards{% else %}Tarjetas{% endif %}"><span class="nav-icon nav-icon-cards" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Cards{% else %}Tarjetas{% endif %}</span></a>{% endif %}
-            {% if features.ledger %}<a class="nav-link {% if active == 'ledger' %}active{% endif %}" href="{% url 'finanzas:ledger' %}" {% if active == 'ledger' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Ledger{% else %}Libro contable{% endif %}"><span class="nav-icon nav-icon-ledger" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Ledger{% else %}Libro contable{% endif %}</span></a>{% endif %}
+            {% if features.recurring %}<a class="nav-link {% if active == 'recurring_list' %}active{% endif %}" href="{% url 'finanzas:recurring_list' %}" {% if active == 'recurring_list' %}aria-current="page"{% endif %} aria-label="{% trans 'Recurrentes' %}"><span class="nav-icon nav-icon-recurring" aria-hidden="true"><span></span></span><span>{% trans 'Recurrentes' %}</span></a>{% endif %}
+            {% if features.net_income %}<a class="nav-link {% if active == 'net_income' %}active{% endif %}" href="{% url 'finanzas:net_income' %}" {% if active == 'net_income' %}aria-current="page"{% endif %} aria-label="{% trans 'Ingreso neto' %}"><span class="nav-icon nav-icon-net-income" aria-hidden="true"><span></span></span><span>{% trans 'Ingreso neto' %}</span></a>{% endif %}
+            {% if features.subscriptions %}<a class="nav-link {% if active == 'subscription_list' %}active{% endif %}" href="{% url 'finanzas:subscription_list' %}" {% if active == 'subscription_list' %}aria-current="page"{% endif %} aria-label="{% trans 'Suscripciones' %}"><span class="nav-icon nav-icon-subscriptions" aria-hidden="true"><span></span></span><span>{% trans 'Suscripciones' %}</span></a>{% endif %}
+            {% if features.credit_cards %}<a class="nav-link {% if active == 'credit_card_list' %}active{% endif %}" href="{% url 'finanzas:credit_card_list' %}" {% if active == 'credit_card_list' %}aria-current="page"{% endif %} aria-label="{% trans 'Tarjetas' %}"><span class="nav-icon nav-icon-cards" aria-hidden="true"><span></span></span><span>{% trans 'Tarjetas' %}</span></a>{% endif %}
+            {% if features.ledger %}<a class="nav-link {% if active == 'ledger' %}active{% endif %}" href="{% url 'finanzas:ledger' %}" {% if active == 'ledger' %}aria-current="page"{% endif %} aria-label="{% trans 'Libro contable' %}"><span class="nav-icon nav-icon-ledger" aria-hidden="true"><span></span></span><span>{% trans 'Libro contable' %}</span></a>{% endif %}
         </nav>
         {% endif %}
 
-        <p class="nav-label" id="nav-label-general">General</p>
+        <p class="nav-label" id="nav-label-general">{% trans 'General' %}</p>
         <nav class="nav flex-column side-nav" aria-labelledby="nav-label-general">
-            {% if features.admin_link %}<a class="nav-link" href="/admin/" aria-label="{% if lang_code|slice:':2' == 'en' %}Administration{% else %}Administracion{% endif %}"><span class="nav-icon nav-icon-admin" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Admin{% else %}Administracion{% endif %}</span></a>{% endif %}
-            {% if features.settings %}<a class="nav-link {% if active == 'settings' %}active{% endif %}" href="{% url 'finanzas:settings' %}" {% if active == 'settings' %}aria-current="page"{% endif %} aria-label="{% if lang_code|slice:':2' == 'en' %}Settings{% else %}Ajustes{% endif %}"><span class="nav-icon nav-icon-settings" aria-hidden="true"><span></span></span><span>{% if lang_code|slice:':2' == 'en' %}Settings{% else %}Ajustes{% endif %}</span></a>{% endif %}
+            {% if features.admin_link %}<a class="nav-link" href="/admin/" aria-label="{% trans 'Administración' %}"><span class="nav-icon nav-icon-admin" aria-hidden="true"><span></span></span><span>{% trans 'Administración' %}</span></a>{% endif %}
+            {% if features.settings %}<a class="nav-link {% if active == 'settings' %}active{% endif %}" href="{% url 'finanzas:settings' %}" {% if active == 'settings' %}aria-current="page"{% endif %} aria-label="{% trans 'Ajustes' %}"><span class="nav-icon nav-icon-settings" aria-hidden="true"><span></span></span><span>{% trans 'Ajustes' %}</span></a>{% endif %}
+            {% if features.settings %}<a class="nav-link {% if active == 'mcp' %}active{% endif %}" href="{% url 'integrations:mcp' %}" {% if active == 'mcp' %}aria-current="page"{% endif %} aria-label="{% trans 'Integraciones' %}"><span class="nav-icon nav-icon-settings" aria-hidden="true"><span></span></span><span>{% trans 'Integraciones' %}</span></a>{% endif %}
+            <a class="nav-link {% if active == 'help_index' or active == 'help_article' %}active{% endif %}" href="{% url 'help:help_index' %}" {% if active == 'help_index' or active == 'help_article' %}aria-current="page"{% endif %} aria-label="{% trans 'Ayuda' %}"><span class="nav-icon nav-icon-settings" aria-hidden="true"><span></span></span><span>{% trans 'Ayuda' %}</span></a>
         </nav>
 
         <div class="upgrade-box">
-            <strong>{{ product.name }} {{ edition.label }}</strong>
-            <span>{% if edition.is_lite %}{% if lang_code|slice:':2' == 'en' %}Lean product edition prepared for sale and quick onboarding.{% else %}Edicion ligera del producto lista para venta y onboarding rapido.{% endif %}{% elif edition.is_personal %}{% if lang_code|slice:':2' == 'en' %}Private operational build for your own use on PC or NAS.{% else %}Compilacion privada para tu uso propio en PC o NAS.{% endif %}{% else %}{% if lang_code|slice:':2' == 'en' %}Full workspace for demos, advanced modules and product evolution.{% else %}Espacio completo para demos, modulos avanzados y evolucion del producto.{% endif %}{% endif %}</span>
+            <strong>{{ product.name }} {{ edition.label }}{% if product.version %} <span class="app-version">v{{ product.version }}</span>{% endif %}</strong>
+            <span>{% if edition.is_lite %}{% trans "Edición ligera del producto lista para venta y onboarding rápido." %}{% elif edition.is_personal %}{% trans "Compilación privada para tu uso propio en PC o NAS." %}{% else %}{% trans "Espacio completo para demos, módulos avanzados y evolución del producto." %}{% endif %}</span>
         </div>
 
         {% if user.is_authenticated %}
-            <div class="session-card">
-                <div class="session-user">
-                    <span class="session-avatar">{{ user.username|first|upper }}</span>
-                    <div>
-                        <strong>{{ user.username }}</strong>
-                        <small>{% if lang_code|slice:':2' == 'en' %}Active session{% else %}Sesion activa{% endif %}</small>
-                    </div>
+        <div class="session-card">
+            <div class="session-user">
+                <span class="session-avatar">{{ user.username|first|upper }}</span>
+                <div>
+                    <strong>{{ user.username }}</strong>
+                    <small>{% trans "Sesión activa" %}</small>
                 </div>
-                <form action="{% url 'logout' %}" method="post">
-                    {% csrf_token %}
-                    <button class="logout-button" type="submit" aria-label="{% if lang_code|slice:':2' == 'en' %}Sign out{% else %}Cerrar sesion{% endif %}">
-                        <span class="door-icon"></span>
-                        <span>{% if lang_code|slice:':2' == 'en' %}Sign out{% else %}Salir{% endif %}</span>
-                    </button>
-                </form>
             </div>
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button class="logout-button" type="submit" aria-label="{% trans 'Cerrar sesión' %}">
+                    <span class="door-icon"></span>
+                    <span>{% trans 'Salir' %}</span>
+                </button>
+            </form>
         {% endif %}
     </aside>
 
     <main class="main-content" id="main-content" tabindex="-1">
         <header class="topbar">
             <div class="topbar-left">
-                <button class="mobile-nav-toggle" type="button" id="mobileNavToggle" aria-label="{% if lang_code|slice:':2' == 'en' %}Open menu{% else %}Abrir menu{% endif %}" aria-controls="app-sidebar" aria-expanded="false">
+                <button class="mobile-nav-toggle" type="button" id="mobileNavToggle" aria-label="{% trans 'Abrir menú' %}" aria-controls="app-sidebar" aria-expanded="false">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h18v2H3v-2Z"/></svg>
                 </button>
                 <span class="crumb-brand">
@@ -111,12 +114,18 @@
                     <img class="crumb-icon crumb-icon-dark" src="{% static product.logo_dark %}" alt="" loading="lazy">
                 </span>
                 <span class="crumb crumb-moneta">{{ product.name }} /</span>
-                <span>{% block section %}Dashboard{% endblock %}</span>
+                <span>{% block section %}{% trans 'Dashboard' %}{% endblock %}</span>
             </div>
             <div class="top-actions">
-                {% if features.settings %}<a class="icon-btn icon-btn-text" href="{% url 'finanzas:settings' %}" aria-label="{% if lang_code|slice:':2' == 'en' %}Settings{% else %}Ajustes{% endif %}">{% if lang_code|slice:':2' == 'en' %}Settings{% else %}Ajustes{% endif %}</a>{% endif %}
-                {% if features.transactions %}<a class="btn btn-success btn-sm" href="{% url 'finanzas:transaction_create' %}">{% if lang_code|slice:':2' == 'en' %}+ New{% else %}+ Nuevo{% endif %}</a>{% endif %}
+                {% if features.settings %}<a class="icon-btn icon-btn-text" href="{% url 'finanzas:settings' %}" aria-label="{% trans 'Ajustes' %}">{% trans 'Ajustes' %}</a>{% endif %}
+                {% if features.transactions %}<a class="btn btn-success btn-sm" href="{% url 'finanzas:transaction_create' %}">{% trans '+ Nuevo' %}</a>{% endif %}
             </div>
+            <!-- Mobile search box (hidden on desktop) -->
+            <form class="search-box search-box-mobile d-md-none" role="search" method="get" action="{% url 'finanzas:transaction_list' %}">
+                <span class="search-icon" aria-hidden="true"></span>
+                <input type="search" name="q" placeholder="{% trans 'Buscar movimientos, contacto o nota' %}" aria-label="{% trans 'Buscar' %}">
+                <button type="submit">{% trans 'Ir' %}</button>
+            </form>
         </header>
         {% if messages %}
             <div class="message-stack" aria-live="polite" aria-atomic="true">
@@ -124,11 +133,11 @@
                     <div class="app-message {{ message.tags }}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">
                         <strong class="app-message-label">
                             {% if "error" in message.tags %}
-                                {% if lang_code|slice:':2' == 'en' %}Error{% else %}Error{% endif %}
+                                {% trans "Error" %}
                             {% elif "success" in message.tags %}
-                                {% if lang_code|slice:':2' == 'en' %}Success{% else %}Exito{% endif %}
+                                {% trans "Éxito" %}
                             {% else %}
-                                {% if lang_code|slice:':2' == 'en' %}Info{% else %}Info{% endif %}
+                                {% trans "Info" %}
                             {% endif %}
                         </strong>
                         <span>{{ message }}</span>
@@ -146,5 +155,6 @@
 <script src="{% static 'js/dashboard.js' %}"></script>
 <script src="{% static 'js/salary_calculator.js' %}"></script>
 <script src="{% static 'js/nav.js' %}"></script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

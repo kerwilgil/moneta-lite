@@ -9,6 +9,7 @@ def product_context(request):
     return {
         "product": {
             "name": getattr(settings, "APP_NAME", "Moneta"),
+            "version": getattr(settings, "APP_VERSION", ""),
             "description_es": getattr(
                 settings,
                 "APP_DESCRIPTION_ES",

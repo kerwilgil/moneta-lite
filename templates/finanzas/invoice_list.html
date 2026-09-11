@@ -1,59 +1,59 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Invoices{% else %}Facturas{% endif %}{% endblock %}
-{% block section %}{% if request.LANGUAGE_CODE|slice:':2' == 'en' %}Invoices{% else %}Facturas{% endif %}{% endblock %}
+{% block title %}{% trans "Facturas" %}{% endblock %}
+{% block section %}{% trans "Facturas" %}{% endblock %}
 {% block content %}
-{% with lang_code=request.LANGUAGE_CODE|default:LANGUAGE_CODE %}
+{% load i18n %}
 <section class="page-heading">
     <div>
-        <h1>{% if lang_code|slice:':2' == 'en' %}Invoices{% else %}Facturas{% endif %}</h1>
-        <p>{% if lang_code|slice:':2' == 'en' %}Issued, received, pending and paid invoices.{% else %}Facturas emitidas, recibidas, pendientes y pagadas.{% endif %}</p>
+        <h1>{% trans "Facturas" %}</h1>
+        <p>{% trans "Facturas emitidas, recibidas, pendientes y pagadas." %}</p>
     </div>
     <div class="heading-actions">
-        <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_invoices_csv' %}">{% if lang_code|slice:':2' == 'en' %}Export CSV{% else %}Exportar CSV{% endif %}</a>
-        <a class="btn btn-success btn-sm" href="{% url 'finanzas:invoice_create' %}">{% if lang_code|slice:':2' == 'en' %}New invoice{% else %}Nueva factura{% endif %}</a>
+        <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_invoices_csv' %}">{% trans "Exportar CSV" %}</a>
+        <a class="btn btn-success btn-sm" href="{% url 'finanzas:invoice_create' %}">{% trans "Nueva factura" %}</a>
     </div>
 </section>
 
 <section class="mini-metric-grid">
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Billed total{% else %}Total facturado{% endif %}</span>
+        <span>{% trans "Total facturado" %}</span>
         <strong>${{ summary_total|floatformat:2 }}</strong>
     </article>
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Pending{% else %}Pendiente{% endif %}</span>
+        <span>{% trans "Pendiente" %}</span>
         <strong>${{ summary_pending|floatformat:2 }}</strong>
     </article>
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Paid{% else %}Pagado{% endif %}</span>
+        <span>{% trans "Pagado" %}</span>
         <strong>${{ summary_paid|floatformat:2 }}</strong>
     </article>
     <article class="mini-metric-card">
-        <span>{% if lang_code|slice:':2' == 'en' %}Overdue{% else %}Vencido{% endif %}</span>
+        <span>{% trans "Vencido" %}</span>
         <strong>${{ summary_overdue|floatformat:2 }}</strong>
     </article>
 </section>
 
 <section class="panel compact-panel">
     <form method="get" class="filters-grid">
-        <input class="form-control" type="search" name="q" aria-label="{% if lang_code|slice:':2' == 'en' %}Search number or contact{% else %}Buscar numero o contacto{% endif %}" placeholder="{% if lang_code|slice:':2' == 'en' %}Search number or contact{% else %}Buscar n&uacute;mero o contacto{% endif %}" value="{{ filters.q }}">
-        <select class="form-select" name="invoice_type" aria-label="{% if lang_code|slice:':2' == 'en' %}Invoice type{% else %}Tipo de factura{% endif %}">
-            <option value="">{% if lang_code|slice:':2' == 'en' %}All types{% else %}Todos los tipos{% endif %}</option>
+        <input class="form-control" type="search" name="q" aria-label="{% trans 'Buscar número o contacto' %}" placeholder="{% trans 'Buscar número o contacto' %}" value="{{ filters.q }}">
+        <select class="form-select" name="invoice_type" aria-label="{% trans 'Tipo de factura' %}">
+            <option value="">{% trans "Todos los tipos" %}</option>
             {% for key, label in invoice_type_choices %}
                 <option value="{{ key }}" {% if filters.invoice_type == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-        <select class="form-select" name="status" aria-label="{% if lang_code|slice:':2' == 'en' %}Invoice status{% else %}Estado de factura{% endif %}">
-            <option value="">{% if lang_code|slice:':2' == 'en' %}All statuses{% else %}Todos los estados{% endif %}</option>
+        <select class="form-select" name="status" aria-label="{% trans 'Estado de factura' %}">
+            <option value="">{% trans "Todos los estados" %}</option>
             {% for key, label in invoice_status_choices %}
                 <option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-        <input class="form-control" type="date" name="date_from" aria-label="{% if lang_code|slice:':2' == 'en' %}From date{% else %}Fecha desde{% endif %}" value="{{ filters.date_from }}">
-        <input class="form-control" type="date" name="date_to" aria-label="{% if lang_code|slice:':2' == 'en' %}To date{% else %}Fecha hasta{% endif %}" value="{{ filters.date_to }}">
+        <input class="form-control" type="date" name="date_from" aria-label="{% trans 'Fecha desde' %}" value="{{ filters.date_from }}">
+        <input class="form-control" type="date" name="date_to" aria-label="{% trans 'Fecha hasta' %}" value="{{ filters.date_to }}">
         <div class="filters-actions">
-            <button class="btn btn-success btn-sm" type="submit">{% if lang_code|slice:':2' == 'en' %}Filter{% else %}Filtrar{% endif %}</button>
-            <a class="btn btn-light btn-sm" href="{% url 'finanzas:invoice_list' %}">{% if lang_code|slice:':2' == 'en' %}Clear{% else %}Limpiar{% endif %}</a>
+            <button class="btn btn-success btn-sm" type="submit">{% trans "Filtrar" %}</button>
+            <a class="btn btn-light btn-sm" href="{% url 'finanzas:invoice_list' %}">{% trans "Limpiar" %}</a>
         </div>
     </form>
 </section>
@@ -63,39 +63,38 @@
         <table class="table data-table align-middle">
             <thead>
             <tr>
-                <th>{% if lang_code|slice:':2' == 'en' %}Number{% else %}N&uacute;mero{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Type{% else %}Tipo{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Contact{% else %}Contacto{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Issue date{% else %}Emisi&oacute;n{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Due date{% else %}Vence{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Total{% else %}Total{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Status{% else %}Estado{% endif %}</th>
-                <th>{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}</th>
+                <th>{% trans "Número" %}</th>
+                <th>{% trans "Tipo" %}</th>
+                <th>{% trans "Contacto" %}</th>
+                <th>{% trans "Emisión" %}</th>
+                <th>{% trans "Vence" %}</th>
+                <th>{% trans "Total" %}</th>
+                <th>{% trans "Estado" %}</th>
+                <th>{% trans "Acciones" %}</th>
             </tr>
             </thead>
             <tbody>
             {% for invoice in invoices %}
                 <tr>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Number{% else %}N&uacute;mero{% endif %}">{{ invoice.number }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Type{% else %}Tipo{% endif %}"><span class="table-chip">{{ invoice.invoice_type_label_ui }}</span></td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Contact{% else %}Contacto{% endif %}">{{ invoice.counterparty }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Issue date{% else %}Emisi&oacute;n{% endif %}">{{ invoice.issue_date }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Due date{% else %}Vence{% endif %}">{{ invoice.due_date|default:"-" }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Total{% else %}Total{% endif %}" class="table-amount">${{ invoice.total|floatformat:2 }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Status{% else %}Estado{% endif %}"><span class="status-dot"></span>{{ invoice.status_label_ui }}</td>
-                    <td data-label="{% if lang_code|slice:':2' == 'en' %}Actions{% else %}Acciones{% endif %}" class="table-actions">
-                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:invoice_edit' invoice.id %}">{% if lang_code|slice:':2' == 'en' %}Edit{% else %}Editar{% endif %}</a>
-                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:invoice_delete' invoice.id %}">{% if lang_code|slice:':2' == 'en' %}Delete{% else %}Eliminar{% endif %}</a>
+                    <td data-label="{% trans 'Número' %}">{{ invoice.number }}</td>
+                    <td data-label="{% trans 'Tipo' %}"><span class="table-chip">{{ invoice.invoice_type_label_ui }}</span></td>
+                    <td data-label="{% trans 'Contacto' %}">{{ invoice.counterparty }}</td>
+                    <td data-label="{% trans 'Emisión' %}">{{ invoice.issue_date }}</td>
+                    <td data-label="{% trans 'Vence' %}">{{ invoice.due_date|default:"-" }}</td>
+                    <td data-label="{% trans 'Total' %}" class="table-amount">${{ invoice.total|floatformat:2 }}</td>
+                    <td data-label="{% trans 'Estado' %}"><span class="status-dot"></span>{{ invoice.status_label_ui }}</td>
+                    <td data-label="{% trans 'Acciones' %}" class="table-actions">
+                        <a class="btn btn-sm btn-light" href="{% url 'finanzas:invoice_edit' invoice.id %}">{% trans "Editar" %}</a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'finanzas:invoice_delete' invoice.id %}">{% trans "Eliminar" %}</a>
                     </td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="8" class="empty-state">{% if lang_code|slice:':2' == 'en' %}No invoices registered.{% else %}No hay facturas registradas.{% endif %}</td>
+                    <td colspan="8" class="empty-state">{% trans "No hay facturas registradas." %}</td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
 </section>
-{% endwith %}
 {% endblock %}

@@ -60,18 +60,21 @@ def _create_auto_transaction(recurring, due_date):
 
 def _process_single_recurring(recurring, run_date, max_cycles=None):
     """Lock, process and advance one schedule while preserving occurrence uniqueness."""
-    max_cycles = max_cycles or getattr(settings, "MONETA_RECURRING_MAX_CYCLES", 24)
+    max_cycles = max_cycles or getattr(settings, "MONETA_RECURRING_MAX_CYCLES", 12)
+    max_total_transactions = getattr(settings, "MONETA_RECURRING_MAX_TOTAL_TRANSACTIONS", 200)
     created_count = 0
     skipped_count = 0
     cycles = 0
 
     with transaction.atomic():
         recurring = (
-            RecurringPayment.objects.select_for_update()
+            # ``of=("self",)`` locks only the recurring row; PostgreSQL rejects
+            # ``FOR UPDATE`` over the nullable ``category`` LEFT join otherwise.
+            RecurringPayment.objects.select_for_update(of=("self",))
             .select_related("user", "account", "category")
             .get(pk=recurring.pk)
         )
-        while recurring.next_due_date <= run_date and cycles < max_cycles:
+        while recurring.next_due_date <= run_date and cycles < max_cycles and created_count < max_total_transactions:
             due_date = recurring.next_due_date
             try:
                 with transaction.atomic():

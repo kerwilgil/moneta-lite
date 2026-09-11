@@ -249,9 +249,9 @@ class JournalEntry(TimeStampedModel):
             raise ValidationError("El asiento contable debe tener Debe y Haber iguales.")
 
     def save(self, *args, **kwargs):
-        if self.pk and not kwargs.get("update_fields"):
-            if self.lines.exists() and not self.is_balanced:
-                raise ValidationError("El asiento contable debe tener Debe y Haber iguales.")
+        # Always validate balance if lines exist and entry is posted
+        if self.pk and self.posted and self.lines.exists() and not self.is_balanced:
+            raise ValidationError("El asiento contable debe tener Debe y Haber iguales.")
         super().save(*args, **kwargs)
 
 

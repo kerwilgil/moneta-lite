@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return Number.isNaN(value) ? 0 : value;
     };
 
-    const formatMoney = (value) => `$${value.toFixed(2)}`;
+    const formatMoney = (value) => window.MonetaCurrency ? window.MonetaCurrency.format(value) : `$${value.toFixed(2)}`;
 
     const lineRows = () => Array.from(linesContainer.querySelectorAll(".line-row"));
 

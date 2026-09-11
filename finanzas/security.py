@@ -1,4 +1,4 @@
-"""Security helpers shared by authentication views and signals."""
+﻿"""Security helpers shared by authentication views and signals."""
 
 import hashlib
 import ipaddress
@@ -56,20 +56,28 @@ def _digest(value):
 
 
 def throttle_keys(request, identity):
-    from django.contrib.auth import get_user_model
+    """Generate throttle keys using constant-time operations to prevent username enumeration.
 
-    User = get_user_model()
-    username_field = User.USERNAME_FIELD
-    normalized_identity = (identity or "").strip()
-    known_identity = (
-        User.objects.filter(**{f"{username_field}__iexact": normalized_identity})
-        .values_list(username_field, flat=True)
-        .first()
-    )
-    return (
-        _digest(_network_identity(client_ip(request))),
-        _digest(str(known_identity).casefold() if known_identity else "unknown-account"),
-    )
+    Uses a secret pepper from settings to make timing attacks infeasible.
+    """
+    from django.conf import settings
+
+    normalized_identity = (identity or "").strip().casefold()
+
+    # Use a pepper from settings (fallback to a derived secret)
+    pepper = getattr(settings, "MONETA_LOGIN_THROTTLE_PEPPER", None)
+    if not pepper:
+        pepper = settings.SECRET_KEY[:32]  # Use part of secret key as pepper
+
+    # Constant-time identity hashing: hash(pepper + identity) regardless of user existence
+    identity_hash = hashlib.sha256(
+        pepper.encode("utf-8") + normalized_identity.encode("utf-8")
+    ).hexdigest()
+
+    # Network hash is already constant-time
+    network_hash = _digest(_network_identity(client_ip(request)))
+
+    return network_hash, identity_hash
 
 
 def _increment_throttle(throttle):

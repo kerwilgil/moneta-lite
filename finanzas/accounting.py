@@ -1,4 +1,4 @@
-"""Accounting helpers for balances and automatic journal entries.
+﻿"""Accounting helpers for balances and automatic journal entries.
 
 This module is the source of truth for how confirmed transactions affect
 account balances and how Moneta creates Debe/Haber journal entries.
@@ -6,17 +6,35 @@ account balances and how Moneta creates Debe/Haber journal entries.
 
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import connection, models, transaction
 
 from .models import Account, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine
 
 
 MANUAL_BALANCE_TYPES = {Account.AccountType.INVESTMENT}
+FINANCIAL_LOCK_NAMESPACE = 0x4D4F4E45  # "MONE", stable advisory-lock namespace.
 
 
 def _as_money(value):
     """Normalize nullable numeric values to two-decimal money Decimals."""
     return (value or Decimal("0.00")).quantize(Decimal("0.01"))
+
+
+def lock_financial_user(user):
+    """Serialize balance-affecting work for one user on PostgreSQL.
+
+    Callers must already be inside ``transaction.atomic``.  The two-key
+    transaction advisory lock is re-entrant, migration-free, and prevents
+    Account/CreditCard row-lock inversions across concurrent UI and import
+    flows.
+    """
+    if connection.vendor != "postgresql":
+        return
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT pg_advisory_xact_lock(%s, %s)",
+            [FINANCIAL_LOCK_NAMESPACE, int(user.pk)],
+        )
 
 
 def ensure_system_account(user, name, account_type):
@@ -59,29 +77,64 @@ def _journal_line(entry, account, debit=Decimal("0.00"), credit=Decimal("0.00"),
     )
 
 
+def get_transaction_system_accounts(user):
+    """Get or create the three system accounts used by transaction journals.
+
+    Returns a tuple of (income_result, expense_result, transfer_bridge) accounts.
+    Use this to avoid repeated get_or_create calls when processing multiple transactions.
+    """
+    income_result = ensure_system_account(user, "Resultado ingresos", Account.AccountType.CAPITAL)
+    expense_result = ensure_system_account(user, "Resultado gastos", Account.AccountType.CAPITAL)
+    transfer_bridge = ensure_system_account(user, "Cuenta puente transferencias", Account.AccountType.CAPITAL)
+    return income_result, expense_result, transfer_bridge
+
+
 @transaction.atomic
-def rebuild_account_balances(user, force_account_ids=None):
+def rebuild_account_balances(user, force_account_ids=None, chunk_size=1000):
     """Recalculate account balances from cleared transactions for one user.
 
     Investments keep their manual balance unless they were touched by a
     transaction or explicitly forced. Credit card model debt is synchronized
     from the linked card account after balances are rebuilt.
+
+    Uses iterator with chunking to avoid loading all transactions into memory.
     """
-    accounts = {account.id: account for account in Account.objects.filter(user=user)}
+    lock_financial_user(user)
     force_account_ids = set(force_account_ids or [])
-    txs = list(
-        FinancialTransaction.objects.filter(user=user, status=FinancialTransaction.Status.CLEARED)
-        .select_related("account", "destination_account", "related_credit_card__account")
-        .order_by("date", "id")
-    )
+
+    # Get accounts that need to be rebuilt
+    accounts_to_rebuild_q = Account.objects.filter(user=user)
+    if force_account_ids:
+        # Only rebuild forced accounts + their related accounts
+        accounts_to_rebuild_q = accounts_to_rebuild_q.filter(
+            models.Q(id__in=force_account_ids) |
+            models.Q(account_type__in=[at for at in Account.AccountType if at not in MANUAL_BALANCE_TYPES])
+        )
+    # PostgreSQL's NO KEY UPDATE lock serializes rebuilds while remaining
+    # compatible with the key-share locks held by concurrent FK inserts.
+    # The ordered lock acquisition also prevents transfer/card deadlocks.
+    if connection.vendor == "postgresql":
+        accounts_to_rebuild_q = accounts_to_rebuild_q.select_for_update(
+            of=("self",), no_key=True
+        )
+    accounts = {
+        account.id: account
+        for account in accounts_to_rebuild_q.order_by("id")
+    }
+    force_account_ids = set(force_account_ids or [])
+
+    # First pass: find touched account IDs using iterator (memory efficient)
     touched_account_ids = set()
-    for tx in txs:
+    for tx in FinancialTransaction.objects.filter(
+        user=user, status=FinancialTransaction.Status.CLEARED
+    ).select_related("account", "destination_account", "related_credit_card__account").order_by("date", "id").iterator(chunk_size=1000):
         touched_account_ids.add(tx.account_id)
         if tx.destination_account_id:
             touched_account_ids.add(tx.destination_account_id)
         if tx.related_credit_card_id and tx.related_credit_card:
             touched_account_ids.add(tx.related_credit_card.account_id)
 
+    # Reset balances for accounts that need rebuilding
     for account in accounts.values():
         if (
             account.id in touched_account_ids
@@ -90,7 +143,10 @@ def rebuild_account_balances(user, force_account_ids=None):
         ):
             account.current_balance = account.opening_balance
 
-    for tx in txs:
+    # Second pass: apply transactions using iterator with chunking
+    for tx in FinancialTransaction.objects.filter(
+        user=user, status=FinancialTransaction.Status.CLEARED
+    ).select_related("account", "destination_account", "related_credit_card__account").order_by("date", "id").iterator(chunk_size=1000):
         amount = _as_money(tx.amount)
         account = accounts.get(tx.account_id)
         destination = accounts.get(tx.destination_account_id) if tx.destination_account_id else None

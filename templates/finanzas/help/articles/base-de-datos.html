@@ -1,0 +1,25 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "Moneta guarda tus datos en SQLite por defecto y admite PostgreSQL como alternativa." %}</p>
+
+<h2>{% trans "SQLite" %}</h2>
+<ul>
+    <li>{% trans "No requiere instalar nada; ideal para uso personal y para probar." %}</li>
+    <li>{% trans "Un solo archivo (db.sqlite3) que puedes respaldar copiándolo." %}</li>
+</ul>
+
+<h2>{% trans "PostgreSQL (recomendado para producción)" %}</h2>
+<ul>
+    <li>{% trans "Mejor para varios usuarios, alta concurrencia y cargas grandes." %}</li>
+    <li>{% trans "Se configura con variables de entorno: DB_ENGINE, DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT." %}</li>
+</ul>
+
+<h2>{% trans "Cómo cambiar" %}</h2>
+<ol>
+    <li>{% trans "Crea una base y un usuario en PostgreSQL." %}</li>
+    <li>{% trans "Ajusta las variables DB_* en tu .env." %}</li>
+    <li>{% trans "Ejecuta las migraciones sobre la nueva base." %}</li>
+</ol>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "Moneta no migra automáticamente tus datos de SQLite a PostgreSQL. Consulta docs/postgresql.md para los detalles y errores comunes." %}</p>

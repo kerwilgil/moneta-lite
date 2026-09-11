@@ -1,0 +1,30 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "Los elementos de Importaciones son propuestas de movimientos, no movimientos reales." %}</p>
+
+<h2>{% trans "De dónde vienen" %}</h2>
+<p>{% trans "Pueden llegar desde integraciones, archivos o agentes de IA conectados por MCP." %}</p>
+
+<h2>{% trans "Cómo funciona" %}</h2>
+<ol>
+    <li>{% trans "Moneta analiza cada propuesta y marca los posibles duplicados." %}</li>
+    <li>{% trans "Tú revisas, editas si hace falta, y decides." %}</li>
+    <li>{% trans "Nada entra al núcleo financiero hasta que una persona lo aprueba." %}</li>
+</ol>
+
+<h2>{% trans "Estados" %}</h2>
+<ul>
+    <li><strong>{% trans "Pendiente" %}</strong>: {% trans "esperando tu revisión." %}</li>
+    <li><strong>{% trans "Aprobado" %}</strong>: {% trans "convertido en un movimiento real." %}</li>
+    <li><strong>{% trans "Rechazado" %}</strong>: {% trans "descartado; queda registrado, no se borra." %}</li>
+    <li><strong>{% trans "Duplicado" %}</strong>: {% trans "coincide con otra propuesta o movimiento." %}</li>
+    <li><strong>{% trans "Con error" %}</strong>: {% trans "falló la validación o el volcado; no dejó nada a medias." %}</li>
+</ul>
+
+<h2>{% trans "Acciones disponibles" %}</h2>
+<ul>
+    <li>{% trans "Editar, aprobar o rechazar cada borrador pendiente." %}</li>
+</ul>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "La detección de duplicados combina el identificador externo y una huella del contenido (comercio, importe, moneda, fecha, signo). La aprobación es atómica: si algo falla, se revierte por completo." %}</p>

@@ -1,0 +1,27 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "El registro diario de dinero: ingresos, gastos, transferencias entre cuentas, pagos de tarjeta y cobros." %}</p>
+
+<h2>{% trans "Para qué sirve" %}</h2>
+<p>{% trans "Es la fuente de verdad de Moneta. Balances, reportes y el Dashboard se calculan a partir de aquí." %}</p>
+
+<h2>{% trans "Campos principales" %}</h2>
+<ul>
+    <li><strong>{% trans "Tipo" %}</strong>: {% trans "ingreso, gasto, transferencia, pago de tarjeta o cobro." %}</li>
+    <li><strong>{% trans "Cuenta" %}</strong> / <strong>{% trans "Cuenta destino" %}</strong>: {% trans "la segunda solo aplica a transferencias y pagos de tarjeta." %}</li>
+    <li><strong>{% trans "Categoría" %}</strong>: {% trans "debe coincidir con el tipo (una categoría de gasto no sirve para un ingreso)." %}</li>
+    <li><strong>{% trans "Importe" %}</strong>, <strong>{% trans "Fecha" %}</strong>, <strong>{% trans "Estado" %}</strong> ({% trans "pendiente / confirmado / anulado" %}).</li>
+</ul>
+
+<h2>{% trans "Acciones disponibles" %}</h2>
+<ul>
+    <li>{% trans "Filtrar por texto, tipo, estado, cuenta, categoría y rango de fechas." %}</li>
+    <li>{% trans "Crear, editar y eliminar movimientos." %}</li>
+    <li>{% trans "Exportar la lista a CSV." %}</li>
+</ul>
+
+<h2>{% trans "Ejemplo" %}</h2>
+<p>{% trans "Una transferencia de 100 de \"Banco\" a \"Ahorro\" reduce Banco en 100 y aumenta Ahorro en 100; no cambia tu balance total." %}</p>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "Editar o eliminar un movimiento recalcula los saldos de las cuentas afectadas de forma atómica." %}</p>

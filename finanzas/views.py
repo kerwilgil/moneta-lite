@@ -1,9 +1,10 @@
-"""HTTP views and UI helpers for the Moneta finance app."""
+﻿"""HTTP views and UI helpers for the Moneta finance app."""
 
 import csv
 import secrets
 from datetime import date, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 
 from django.conf import settings
 from django.contrib import messages
@@ -25,6 +26,8 @@ from django.views.decorators.http import require_http_methods
 from .accounting import (
     delete_invoice_journal,
     delete_transaction_journal,
+    get_transaction_system_accounts,
+    lock_financial_user,
     rebuild_account_balances,
     sync_credit_card_account_balance,
     sync_invoice_journal,
@@ -43,7 +46,7 @@ from .forms import (
     TransactionForm,
 )
 from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine, RecurringPayment, SetupState
-from .product import require_feature
+from .product import feature_enabled, require_feature
 from .security import is_login_locked
 from .services import advice_for_user, dashboard_summary, monthly_cash_flow_series
 
@@ -179,7 +182,7 @@ def decorate_account(account, english=False):
 
 def decorate_category(category, english=False):
     if category:
-        category.display_name_ui = localized_name(CATEGORY_NAME_LABELS, category.name, english)
+        category.display_name_ui = category.name
     return category
 
 
@@ -234,6 +237,20 @@ def change_language(request):
 def initial_setup(request):
     if not getattr(settings, "MONETA_WEB_SETUP_ENABLED", False):
         raise Http404
+
+    # Additional guard: require header or IP allowlist when web setup is enabled
+    allowed_ips = getattr(settings, "MONETA_SETUP_ALLOWED_IPS", [])
+    required_header = getattr(settings, "MONETA_SETUP_REQUIRE_HEADER", False)
+
+    if required_header:
+        header_value = request.META.get("HTTP_X_MONETA_SETUP", "")
+        if header_value != "1":
+            raise Http404
+
+    if allowed_ips:
+        client_ip_val = client_ip(request)
+        if client_ip_val not in allowed_ips and client_ip_val != "unknown":
+            raise Http404
 
     User = get_user_model()
     if User.objects.exists():
@@ -579,6 +596,7 @@ def save_user_form(
         if form.is_valid():
             try:
                 with transaction.atomic():
+                    lock_financial_user(request.user)
                     obj = form.save(commit=False)
                     if instance_mutator:
                         instance_mutator(obj)
@@ -637,6 +655,11 @@ def confirm_delete(request, instance, success_url, label):
 @login_required
 def dashboard(request):
     context = dashboard_summary(request.user)
+    if not feature_enabled("recurring"):
+        context["upcoming"] = [
+            payment for payment in context.get("upcoming", [])
+            if payment.is_subscription
+        ]
     context["advice"] = advice_for_user(request.user, context)
     english = is_english(request)
     context["cash_flow_series"] = monthly_cash_flow_series(request.user, english=english)
@@ -659,6 +682,47 @@ def dashboard(request):
         decorate_category(transaction.category, english)
         transaction.status_label_ui = localized_label(TX_STATUS_LABELS, transaction.status, english, transaction.get_status_display())
     return render(request, "finanzas/dashboard.html", context)
+
+
+def _get_cached_filter_choices(request, user):
+    """Get filter choices from session cache with 5-minute TTL."""
+    cache_key = "_transaction_list_filter_cache"
+    now = timezone.now().timestamp()
+    cached = request.session.get(cache_key)
+    if cached and cached.get("user_id") == user.id:
+        expires = cached.get("expires", 0)
+        if expires > now:
+            # Reconstruct objects from cached data
+            accounts_data = cached.get("accounts", [])
+            categories_data = cached.get("categories", [])
+            accounts = [SimpleNamespace(id=a["id"], name=a["name"], is_active=a["is_active"],
+                                       account_type=a["account_type"], currency=a["currency"],
+                                       opening_balance=a["opening_balance"], current_balance=a["current_balance"])
+                       for a in accounts_data]
+            categories = [SimpleNamespace(id=c["id"], name=c["name"], category_type=c["category_type"],
+                                         monthly_limit=c.get("monthly_limit")) for c in categories_data]
+            return accounts, categories
+
+    accounts_qs = Account.objects.filter(user=user, is_active=True).order_by("name")
+    categories_qs = Category.objects.filter(user=user).order_by("name")
+
+    # Store serializable data in session
+    accounts_data = [{"id": a.id, "name": a.name, "is_active": a.is_active,
+                      "account_type": a.account_type, "currency": a.currency,
+                      "opening_balance": str(a.opening_balance), "current_balance": str(a.current_balance)}
+                     for a in accounts_qs]
+    categories_data = [{"id": c.id, "name": c.name, "category_type": c.category_type,
+                        "monthly_limit": str(c.monthly_limit) if c.monthly_limit else None}
+                       for c in categories_qs]
+
+    request.session["_transaction_list_filter_cache"] = {
+        "user_id": user.id,
+        "expires": timezone.now().timestamp() + 300,  # 5 minutes
+        "accounts": accounts_data,
+        "categories": categories_data,
+    }
+
+    return list(accounts_qs), list(categories_qs)
 
 
 @login_required
@@ -717,6 +781,8 @@ def transaction_list(request):
             transaction.get_status_display(),
         )
 
+    accounts, categories = _get_cached_filter_choices(request, request.user)
+
     return render(
         request,
         "finanzas/transaction_list.html",
@@ -725,8 +791,8 @@ def transaction_list(request):
             "page_obj": page_obj,
             "type_choices": localized_choices(FinancialTransaction.TransactionType.choices, TX_TYPE_LABELS, english),
             "status_choices": localized_choices(FinancialTransaction.Status.choices, TX_STATUS_LABELS, english),
-            "accounts": Account.objects.filter(user=request.user, is_active=True).order_by("name"),
-            "categories": Category.objects.filter(user=request.user).order_by("name"),
+            "accounts": accounts,
+            "categories": categories,
             "filters": {
                 "q": query,
                 "transaction_type": tx_type,
@@ -746,6 +812,7 @@ def transaction_list(request):
 
 @login_required
 def transaction_create(request):
+    system_accounts = get_transaction_system_accounts(request.user)
     return save_user_form(
         request,
         TransactionForm,
@@ -755,7 +822,7 @@ def transaction_create(request):
         "Registra ingresos, gastos, pagos de tarjeta, cobros o transferencias.",
         "Guardar movimiento",
         extra_context=category_helper_context(),
-        after_save=lambda obj: (sync_transaction_journal(obj), rebuild_account_balances(request.user)),
+        after_save=lambda obj: (sync_transaction_journal(obj, _system_accounts=system_accounts), rebuild_account_balances(request.user, force_account_ids=[obj.account_id, obj.destination_account_id, obj.related_credit_card.account_id if obj.related_credit_card else None])),
     )
 
 
@@ -768,6 +835,8 @@ def transaction_edit(request, pk):
     if instance.related_credit_card_id and instance.related_credit_card:
         original_account_ids.add(instance.related_credit_card.account_id)
 
+    system_accounts = get_transaction_system_accounts(request.user)
+
     def after_transaction_edit(obj):
         account_ids = set(original_account_ids)
         account_ids.add(obj.account_id)
@@ -775,7 +844,7 @@ def transaction_edit(request, pk):
             account_ids.add(obj.destination_account_id)
         if obj.related_credit_card_id and obj.related_credit_card:
             account_ids.add(obj.related_credit_card.account_id)
-        sync_transaction_journal(obj)
+        sync_transaction_journal(obj, _system_accounts=system_accounts)
         rebuild_account_balances(request.user, force_account_ids=account_ids)
 
     return save_user_form(
@@ -833,7 +902,7 @@ def account_create(request):
         "Nueva cuenta",
         "Agrega bancos, efectivo, tarjetas, préstamos, inversiones o capital.",
         "Guardar cuenta",
-        after_save=lambda obj: (sync_credit_card_account_balance(obj), rebuild_account_balances(request.user)),
+        after_save=lambda obj: (sync_credit_card_account_balance(obj), rebuild_account_balances(request.user, force_account_ids=[obj.id])),
     )
 
 
@@ -849,7 +918,7 @@ def account_edit(request, pk):
         "Ajusta tipo, moneda y balances base.",
         "Guardar cambios",
         instance=instance,
-        after_save=lambda obj: (sync_credit_card_account_balance(obj), rebuild_account_balances(request.user)),
+        after_save=lambda obj: (sync_credit_card_account_balance(obj), rebuild_account_balances(request.user, force_account_ids=[obj.id])),
     )
 
 
@@ -1286,7 +1355,7 @@ def credit_card_create(request):
             "helper_url": "finanzas:account_create",
             "helper_label": "Crear cuenta de tarjeta",
         },
-        after_save=lambda obj: (rebuild_account_balances(request.user), sync_credit_card_account_balance(obj)),
+        after_save=lambda obj: (rebuild_account_balances(request.user, force_account_ids=[obj.account_id]), sync_credit_card_account_balance(obj)),
     )
 
 
@@ -1303,7 +1372,7 @@ def credit_card_edit(request, pk):
         "Ajusta deuda, tasa y configuracion de pagos.",
         "Guardar cambios",
         instance=instance,
-        after_save=lambda obj: (rebuild_account_balances(request.user), sync_credit_card_account_balance(obj)),
+        after_save=lambda obj: (rebuild_account_balances(request.user, force_account_ids=[obj.account_id]), sync_credit_card_account_balance(obj)),
     )
 
 

@@ -14,6 +14,8 @@
         <button class="btn btn-outline-secondary btn-sm" id="dashboard-refresh" type="button">{% if lang_code|slice:':2' == 'en' %}Refresh{% else %}Actualizar{% endif %}</button>
     </div>
 </section>
+{% trans "El Dashboard resume tu situación del periodo. Es de solo lectura: los números se calculan a partir de tus movimientos y no modifican saldos." as help_text %}
+{% include "finanzas/help/_help_button.html" with slug="dashboard" text=help_text %}
 
 <section class="metric-grid">
     <article class="metric-card metric-primary">
@@ -71,7 +73,7 @@
                     </em>
                 </div>
             {% empty %}
-                <div class="empty-state-rich" style="grid-column: 1 / -1;">
+                <div class="empty-state-rich empty-state-full">
                     <span class="empty-icon" aria-hidden="true">+</span>
                     <strong>{% if lang_code|slice:':2' == 'en' %}No accounts yet{% else %}A&uacute;n no hay cuentas{% endif %}</strong>
                     <p>{% if lang_code|slice:':2' == 'en' %}Create your initial accounts to start tracking balance and cash flow.{% else %}Crea tus cuentas iniciales para comenzar a seguir balance y flujo de caja.{% endif %}</p>
@@ -96,6 +98,14 @@
             <canvas id="cashFlowChart" role="img" aria-label="{% if lang_code|slice:':2' == 'en' %}Monthly cash-flow bar chart{% else %}Grafico de barras del flujo de caja mensual{% endif %}">
                 {% if lang_code|slice:':2' == 'en' %}Monthly cash-flow values are also available in the page data.{% else %}Los valores mensuales del flujo de caja tambien estan disponibles en los datos de la pagina.{% endif %}
             </canvas>
+            <!-- Tabular fallback for accessibility/no-JS -->
+            <table class="visually-hidden cash-flow-table" aria-hidden="true">
+                <caption>{% if lang_code|slice:':2' == 'en' %}Monthly cash flow values{% else %}Valores mensuales de flujo de caja{% endif %}</caption>
+                <thead>
+                    <tr><th scope="col">{% if lang_code|slice:':2' == 'en' %}Month{% else %}Mes{% endif %}</th><th scope="col">{% if lang_code|slice:':2' == 'en' %}Value{% else %}Valor{% endif %}</th></tr>
+                </thead>
+                <tbody id="cashFlowTableBody"></tbody>
+            </table>
         </div>
     </article>
 </section>
@@ -104,9 +114,9 @@
     <div class="panel-header">
         <div>
             <h2>{% if lang_code|slice:':2' == 'en' %}Upcoming commitments{% else %}Compromisos pr&oacute;ximos{% endif %}</h2>
-            <p>{% if lang_code|slice:':2' == 'en' %}Recurring items and subscriptions due soon.{% else %}Recurrentes y suscripciones por vencer pronto.{% endif %}</p>
+            <p>{% if features.recurring %}{% if lang_code|slice:':2' == 'en' %}Recurring items and subscriptions due soon.{% else %}Recurrentes y suscripciones por vencer pronto.{% endif %}{% else %}{% if lang_code|slice:':2' == 'en' %}Subscriptions due soon.{% else %}Suscripciones por vencer pronto.{% endif %}{% endif %}</p>
         </div>
-        <a class="btn btn-light btn-sm" href="{% url 'finanzas:recurring_list' %}">{% if lang_code|slice:':2' == 'en' %}Manage{% else %}Gestionar{% endif %}</a>
+        <a class="btn btn-light btn-sm" href="{% if features.recurring %}{% url 'finanzas:recurring_list' %}{% else %}{% url 'finanzas:subscription_list' %}{% endif %}">{% if lang_code|slice:':2' == 'en' %}Manage{% else %}Gestionar{% endif %}</a>
     </div>
     <div class="upcoming-grid">
         {% for payment in upcoming %}
@@ -122,17 +132,17 @@
                 <small>{% if lang_code|slice:':2' == 'en' %}Due{% else %}Vence{% endif %}: {{ payment.next_due_date }}</small>
             </article>
         {% empty %}
-            <div class="empty-state-rich" style="grid-column: 1 / -1;">
+            <div class="empty-state-rich empty-state-full">
                 <span class="empty-icon" aria-hidden="true">&#10003;</span>
                 <strong>{% if lang_code|slice:':2' == 'en' %}No upcoming commitments{% else %}Sin compromisos pr&oacute;ximos{% endif %}</strong>
-                <p>{% if lang_code|slice:':2' == 'en' %}You have no recurring or subscription payments due soon.{% else %}No tienes pagos recurrentes o suscripciones por vencer pronto.{% endif %}</p>
-                <a class="btn btn-light btn-sm" href="{% url 'finanzas:recurring_list' %}">{% if lang_code|slice:':2' == 'en' %}Manage recurring{% else %}Gestionar recurrentes{% endif %}</a>
+                <p>{% if features.recurring %}{% if lang_code|slice:':2' == 'en' %}You have no recurring or subscription payments due soon.{% else %}No tienes pagos recurrentes o suscripciones por vencer pronto.{% endif %}{% else %}{% if lang_code|slice:':2' == 'en' %}You have no subscriptions due soon.{% else %}No tienes suscripciones por vencer pronto.{% endif %}{% endif %}</p>
+                <a class="btn btn-light btn-sm" href="{% if features.recurring %}{% url 'finanzas:recurring_list' %}{% else %}{% url 'finanzas:subscription_list' %}{% endif %}">{% if features.recurring %}{% if lang_code|slice:':2' == 'en' %}Manage recurring{% else %}Gestionar recurrentes{% endif %}{% else %}{% if lang_code|slice:':2' == 'en' %}Manage subscriptions{% else %}Gestionar suscripciones{% endif %}{% endif %}</a>
             </div>
         {% endfor %}
     </div>
 </section>
 
-<section class="panel compact-panel net-income-panel">
+{% if features.net_income %}<section class="panel compact-panel net-income-panel">
     <div class="panel-header net-income-header">
         <div>
             <h2>{% if lang_code|slice:':2' == 'en' %}Monthly net income{% else %}Ingreso neto mensual{% endif %}</h2>
@@ -154,7 +164,7 @@
             <span>{% if lang_code|slice:':2' == 'en' %}Align salary, debt and recurring payments in one monthly decision point.{% else %}Alinea salario, deuda y pagos recurrentes en un solo punto de decisi&oacute;n mensual.{% endif %}</span>
         </article>
     </div>
-</section>
+</section>{% endif %}
 
 <section class="dashboard-grid secondary secondary-cluster">
     <article class="panel">

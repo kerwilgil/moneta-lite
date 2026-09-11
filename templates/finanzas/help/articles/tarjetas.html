@@ -1,0 +1,22 @@
+{% load i18n %}
+<h2>{% trans "Qué es" %}</h2>
+<p>{% trans "El control de tus tarjetas de crédito: cuánto puedes gastar, cuánto debes y cuándo pagar." %}</p>
+
+<h2>{% trans "Conceptos" %}</h2>
+<ul>
+    <li><strong>{% trans "Límite" %}</strong>: {% trans "el máximo que el banco te presta con esa tarjeta." %}</li>
+    <li><strong>{% trans "Saldo" %}</strong>: {% trans "lo que debes ahora mismo." %}</li>
+    <li><strong>{% trans "Disponible" %}</strong>: {% trans "límite menos saldo; lo que aún puedes usar." %}</li>
+    <li><strong>{% trans "Fecha de corte" %}</strong>: {% trans "el día en que se cierra el estado de cuenta del periodo." %}</li>
+    <li><strong>{% trans "Fecha de pago" %}</strong>: {% trans "el día límite para pagar sin intereses de mora." %}</li>
+    <li><strong>{% trans "Pago mínimo" %}</strong> / <strong>{% trans "pago de contado" %}</strong>: {% trans "el mínimo exigido y el total para no generar intereses." %}</li>
+</ul>
+
+<h2>{% trans "Acciones disponibles" %}</h2>
+<ul>
+    <li>{% trans "Crear y editar tarjetas con su límite, tasa y días de corte y pago." %}</li>
+    <li>{% trans "Registrar un pago de tarjeta como movimiento desde la cuenta que lo paga." %}</li>
+</ul>
+
+<h2>{% trans "Notas" %}</h2>
+<p>{% trans "El límite de una tarjeta no cuenta como dinero disponible en tu balance total: es deuda potencial, no un activo." %}</p>

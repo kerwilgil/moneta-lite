@@ -1,0 +1,15 @@
+{% load i18n %}
+<h2>{% trans "¿Cuál es la diferencia entre Lite y Pro?" %}</h2>
+<p>{% trans "Lite incluye dashboard, cuentas, movimientos, facturas, tarjetas, suscripciones con seguros, reportes, importaciones y MCP. Pro añade pagos recurrentes automáticos, catálogo completo de suscripciones, libro contable, ingreso neto y exportaciones avanzadas." %}</p>
+
+<h2>{% trans "¿Puedo usar Moneta en un NAS o servidor?" %}</h2>
+<p>{% trans "Sí, con Python disponible. Publícalo detrás de un proxy inverso con HTTPS o accede por VPN privada. runserver es solo para desarrollo local." %}</p>
+
+<h2>{% trans "¿Puedo acceder desde otra computadora?" %}</h2>
+<p>{% trans "Sí, mediante HTTPS con un proxy inverso o una VPN. Configura tu dominio en DJANGO_ALLOWED_HOSTS y DJANGO_CSRF_TRUSTED_ORIGINS." %}</p>
+
+<h2>{% trans "¿Mis datos salen de mi equipo?" %}</h2>
+<p>{% trans "No. Moneta es self-hosted y funciona sin conexión. La IA está deshabilitada por defecto y no se envía nada a servicios externos salvo que tú configures un cliente MCP." %}</p>
+
+<h2>{% trans "¿Necesito una clave de API de IA?" %}</h2>
+<p>{% trans "No. Moneta funciona por completo sin IA y sin clave de API." %}</p>

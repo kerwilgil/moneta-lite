@@ -11,6 +11,8 @@
     </div>
     <a class="btn btn-outline-success btn-sm" href="{% url 'finanzas:export_transactions_csv' %}">{% if lang_code|slice:':2' == 'en' %}Export CSV{% else %}Exportar CSV{% endif %}</a>
 </section>
+{% trans "Capital neto es activos menos pasivos. El presupuesto por categoría compara el gasto del mes con el límite que configuraste en cada categoría." as help_text %}
+{% include "finanzas/help/_help_button.html" with slug="reportes" text=help_text %}
 
 <section class="metric-grid">
     <article class="metric-card">
@@ -95,7 +97,7 @@
                         <div class="budget-usage">
                             <span>{{ row.usage_percent|floatformat:2 }}%</span>
                             <div class="progress">
-                                <div class="progress-bar {% if row.status == 'over' %}bg-danger{% elif row.status == 'warning' %}bg-warning{% else %}bg-success{% endif %}" role="progressbar" style="width: {% if row.usage_percent > 100 %}100{% else %}{{ row.usage_percent }}{% endif %}%" aria-valuenow="{{ row.usage_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                <div class="progress-bar {% if row.status == 'over' %}bg-danger{% elif row.status == 'warning' %}bg-warning{% else %}bg-success{% endif %}" role="progressbar" aria-valuenow="{{ row.usage_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
                         </div>
                     </td>

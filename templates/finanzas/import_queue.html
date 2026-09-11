@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Importaciones" %}{% endblock %}
+{% block section %}{% trans "Importaciones" %}{% endblock %}
+{% block content %}
+{% load i18n %}
+<section class="page-heading">
+    <div>
+        <h1>{% trans "Cola de importaciones" %}</h1>
+        <p>{% trans "Revisa, edita y aprueba manualmente los borradores propuestos por agentes o importadores." %}</p>
+    </div>
+</section>
+{% trans "Cada elemento es una propuesta de movimiento, no un movimiento real. Pueden llegar desde integraciones, archivos o agentes de IA. Moneta marca los duplicados y nada entra al núcleo financiero hasta que una persona lo aprueba." as help_text %}
+{% include "finanzas/help/_help_button.html" with slug="importaciones" text=help_text %}
+
+<nav class="import-tabs" aria-label="{% trans 'Filtrar por estado' %}">
+    <ul class="nav nav-pills">
+        {% for tab in status_tabs %}
+        <li class="nav-item">
+            <a class="nav-link {% if tab.active %}active{% endif %}"
+               href="?status={{ tab.key }}"
+               {% if tab.active %}aria-current="page"{% endif %}>
+                {{ tab.label }}
+                <span class="badge bg-secondary">{{ tab.count }}</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+
+{% if drafts %}
+<div class="table-responsive">
+    <table class="table align-middle">
+        <caption class="visually-hidden">{% trans "Borradores de importacion" %}</caption>
+        <thead>
+            <tr>
+                <th scope="col">{% trans "Comercio" %}</th>
+                <th scope="col">{% trans "Descripcion" %}</th>
+                <th scope="col" class="text-end">{% trans "Monto" %}</th>
+                <th scope="col">{% trans "Moneda" %}</th>
+                <th scope="col">{% trans "Fecha" %}</th>
+                <th scope="col">{% trans "Origen" %}</th>
+                <th scope="col">{% trans "Categoria" %}</th>
+                <th scope="col" class="text-end">{% trans "Confianza" %}</th>
+                <th scope="col">{% trans "Estado" %}</th>
+                <th scope="col">{% trans "Acciones" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for d in drafts %}
+            <tr>
+                <td>{{ d.merchant|default:"—" }}</td>
+                <td>{{ d.description }}</td>
+                <td class="text-end">{{ d.amount }}</td>
+                <td>{{ d.currency }}</td>
+                <td>{{ d.transaction_date|date:"Y-m-d" }}</td>
+                <td>{{ d.source }}</td>
+                <td>{{ d.suggested_category.name|default:"—" }}</td>
+                <td class="text-end">{{ d.confidence }}</td>
+                <td>
+                    <span class="badge bg-light text-dark">{{ d.get_status_display }}</span>
+                    {% if d.transaction_id %}<a href="{% url 'finanzas:transaction_edit' d.transaction_id %}">#{{ d.transaction_id }}</a>{% endif %}
+                </td>
+                <td>
+                    {% if d.status == 'pending' %}
+                    <div class="d-flex gap-1">
+                        <a class="btn btn-sm btn-light" href="{% url 'imports:draft_edit' d.pk %}">{% trans "Editar" %}</a>
+                        <form method="post" action="{% url 'imports:draft_approve' d.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success">{% trans "Aprobar" %}</button>
+                        </form>
+                        <form method="post" action="{% url 'imports:draft_reject' d.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">{% trans "Rechazar" %}</button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav aria-label="{% trans 'Paginacion' %}">
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?status={{ status }}&amp;page={{ page_obj.previous_page_number }}">{% trans "Anterior" %}</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?status={{ status }}&amp;page={{ page_obj.next_page_number }}">{% trans "Siguiente" %}</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<p class="text-muted">{% trans "No hay borradores en este estado." %}</p>
+{% endif %}
+{% endblock %}
