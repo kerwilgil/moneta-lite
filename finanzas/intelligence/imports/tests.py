@@ -7,7 +7,7 @@ from decimal import Decimal
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
 
 from finanzas.models import Account, Category, FinancialTransaction
@@ -75,7 +75,7 @@ class CreationTests(ImportQueueBase):
         self.assertTrue(d.fingerprint)
 
     def test_create_draft_rejects_bad_amounts(self):
-        for bad in ("nan", "inf", "-5", "0", "abc"):
+        for bad in ("nan", "inf", "-5", "0", "abc", "1e1000"):
             with self.assertRaises(services.ValidationFailed):
                 self._draft(amount=bad, external_id=f"x{bad}")
 
@@ -88,6 +88,20 @@ class CreationTests(ImportQueueBase):
 
 # --------------------------------------------------------------------------- #
 class OwnershipTests(ImportQueueBase):
+    def test_non_owner_cannot_review_draft_through_services(self):
+        d = self._draft()
+        other = self._draft(description="Other")
+        for action in (
+            lambda: services.update_draft(d, reviewer=self.other, amount="20"),
+            lambda: services.reject_draft(d, reviewer=self.other),
+            lambda: services.mark_draft_duplicate(d, other, reviewer=self.other),
+        ):
+            with self.assertRaises(services.OwnershipError):
+                action()
+        d.refresh_from_db()
+        self.assertEqual(d.status, TransactionDraft.Status.PENDING)
+        self.assertEqual(d.amount, Decimal("4.50"))
+
     def test_cannot_use_other_users_account(self):
         with self.assertRaises(services.OwnershipError):
             self._draft(account=self.other_acc.pk)
@@ -198,6 +212,82 @@ class ExternalIdTests(ImportQueueBase):
 
 # --------------------------------------------------------------------------- #
 class ApprovalTests(ImportQueueBase):
+    def test_card_payment_uses_owned_destination_card_account(self):
+        from finanzas.models import CreditCard
+        card_account = Account.objects.create(user=self.user, name="Card", account_type="credit_card",
+                                              opening_balance="100", current_balance="100")
+        card = CreditCard.objects.create(user=self.user, account=card_account,
+                                         credit_limit="500", current_debt="100",
+                                         annual_interest_rate="18", statement_minimum_payment="5",
+                                         statement_day=1, payment_due_day=15)
+        d = self._draft(transaction_type="card_payment", amount="20",
+                        destination_account=card_account)
+        tx = services.approve_draft(d, reviewer=self.user)
+        self.assertEqual(tx.related_credit_card_id, card.pk)
+        self.assertIsNone(tx.destination_account_id)
+        self.acc.refresh_from_db()
+        card.refresh_from_db()
+        self.assertEqual(self.acc.current_balance, Decimal("980"))
+        self.assertEqual(card.current_debt, Decimal("80"))
+        self.assertEqual(services.approve_draft(d, reviewer=self.user).pk, tx.pk)
+
+    def test_cross_currency_transfer_cannot_mutate_balances(self):
+        self.acc2.currency = "EUR"
+        self.acc2.save()
+        d = self._draft(transaction_type="transfer", destination_account=self.acc2)
+        with self.assertRaises(services.ValidationFailed):
+            services.approve_draft(d, reviewer=self.user)
+        self.assertFalse(FinancialTransaction.objects.exists())
+        self.acc.refresh_from_db()
+        self.assertEqual(self.acc.current_balance, Decimal("1000.00"))
+
+    def test_edit_can_clear_optional_relations(self):
+        d = self._draft(transaction_type="transfer", destination_account=self.acc2,
+                        suggested_category=self.cat)
+        d = services.update_draft(d, reviewer=self.user, transaction_type="expense",
+                                  destination_account=None, suggested_category=None)
+        d.refresh_from_db()
+        self.assertIsNone(d.destination_account_id)
+        self.assertIsNone(d.suggested_category_id)
+        tx = services.approve_draft(d, reviewer=self.user)
+        self.assertEqual(tx.transaction_type, "expense")
+
+    def test_timeout_after_financial_write_rolls_back_and_retry_is_single(self):
+        d = self._draft()
+        with mock.patch("finanzas.intelligence.imports.services.rebuild_account_balances",
+                        side_effect=TimeoutError("synthetic timeout")):
+            with self.assertRaises(TimeoutError):
+                services.approve_draft(d, reviewer=self.user)
+        self.assertFalse(FinancialTransaction.objects.exists())
+        from finanzas.models import JournalEntry
+        self.assertFalse(JournalEntry.objects.exists())
+        tx = services.approve_draft(d, reviewer=self.user)
+        self.assertEqual(services.approve_draft(d, reviewer=self.user).pk, tx.pk)
+        self.assertEqual(FinancialTransaction.objects.count(), 1)
+
+    def test_currency_mismatch_cannot_mutate_core(self):
+        d = self._draft(currency="EUR")
+        with self.assertRaises(services.ValidationFailed):
+            services.approve_draft(d, reviewer=self.user)
+        d.refresh_from_db()
+        self.assertEqual(d.status, TransactionDraft.Status.PENDING)
+        self.assertFalse(FinancialTransaction.objects.exists())
+
+    def test_invalid_financial_payload_is_a_review_error(self):
+        d = self._draft(transaction_type="transfer")
+        self.client.force_login(self.user)
+        response = self.client.post(reverse("imports:draft_approve", args=[d.pk]))
+        self.assertEqual(response.status_code, 302)
+        d.refresh_from_db()
+        self.assertEqual(d.status, TransactionDraft.Status.PENDING)
+        self.assertFalse(FinancialTransaction.objects.exists())
+
+    def test_non_owner_cannot_approve_even_through_model_wrapper(self):
+        d = self._draft()
+        with self.assertRaises(services.OwnershipError):
+            d.approve(self.other)
+        self.assertFalse(FinancialTransaction.objects.exists())
+
     def test_pending_to_approved_creates_single_transaction(self):
         d = self._draft(amount="4.50", transaction_type="expense",
                         suggested_category=self.cat.pk)
@@ -318,3 +408,69 @@ class RawMetadataTests(ImportQueueBase):
     def test_long_strings_truncated(self):
         d = self._draft(raw_metadata={"body": "y" * 5000})
         self.assertLessEqual(len(d.raw_metadata["body"]), 2000)
+
+
+class ImportConcurrencyTests(TransactionTestCase):
+    """Committed, independent PostgreSQL connections exercise real locking."""
+
+    def setUp(self):
+        from django.db import connection
+        if connection.vendor != "postgresql":
+            self.skipTest("PostgreSQL locking integration; SQLite tested separately")
+        self.user = _mkuser("concurrent-import")
+        self.acc = Account.objects.create(user=self.user, name="Synthetic bank",
+                                         account_type="checking", opening_balance=1000,
+                                         current_balance=1000)
+
+    def _parallel(self, action):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+        from django.db import connection, connections
+        gate = Barrier(4)
+
+        def worker(index):
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("SET lock_timeout = '5s'")
+                    cursor.execute("SET statement_timeout = '10s'")
+                gate.wait(timeout=10)
+                return action(index)
+            finally:
+                connections.close_all()
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futures = [pool.submit(worker, i) for i in range(4)]
+            return [future.result(timeout=20) for future in futures]
+
+    def _draft(self, **overrides):
+        data = dict(source="concurrency", description="Synthetic expense", amount="10.00",
+                    currency="USD", transaction_date="2026-03-01",
+                    transaction_type="expense", account=self.acc.pk)
+        data.update(overrides)
+        return services.create_transaction_draft(self.user, **data)
+
+    def test_concurrent_batch_retry_returns_same_batch(self):
+        ids = self._parallel(lambda _: services.create_import_batch(
+            self.user, source="concurrency", external_batch_id="same-batch").pk)
+        self.assertEqual(len(set(ids)), 1)
+        self.assertEqual(ImportBatch.objects.count(), 1)
+
+    def test_concurrent_draft_retry_returns_same_draft(self):
+        ids = self._parallel(lambda _: self._draft(external_id="same", on_duplicate="skip").pk)
+        self.assertEqual(len(set(ids)), 1)
+        self.assertEqual(TransactionDraft.objects.count(), 1)
+
+    def test_concurrent_approval_has_one_effect(self):
+        draft = self._draft()
+        ids = self._parallel(lambda _: services.approve_draft(draft, reviewer=self.user).pk)
+        self.assertEqual(len(set(ids)), 1)
+        self.assertEqual(FinancialTransaction.objects.count(), 1)
+        self.acc.refresh_from_db()
+        self.assertEqual(self.acc.current_balance, Decimal("990.00"))
+
+    def test_distinct_approvals_preserve_all_balances(self):
+        drafts = [self._draft(description=f"Expense {i}") for i in range(4)]
+        ids = self._parallel(lambda i: services.approve_draft(drafts[i], reviewer=self.user).pk)
+        self.assertEqual(len(set(ids)), 4)
+        self.acc.refresh_from_db()
+        self.assertEqual(self.acc.current_balance, Decimal("960.00"))

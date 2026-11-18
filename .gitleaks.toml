@@ -1,0 +1,7 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documented Spanish placeholder, not a credential (INSTALL.md)."
+regexTarget = "secret"
+regexes = ['''^una-clave-unica-privada-de-50-caracteres-o-mas$''']

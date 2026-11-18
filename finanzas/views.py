@@ -1,4 +1,4 @@
-﻿"""HTTP views and UI helpers for the Moneta finance app."""
+"""HTTP views and UI helpers for the Moneta finance app."""
 
 import csv
 import secrets
@@ -26,27 +26,23 @@ from django.views.decorators.http import require_http_methods
 from .accounting import (
     delete_invoice_journal,
     delete_transaction_journal,
-    get_transaction_system_accounts,
     lock_financial_user,
     rebuild_account_balances,
     sync_credit_card_account_balance,
     sync_invoice_journal,
     sync_transaction_journal,
 )
-from .automation import execute_due_recurrings_for_user
 from .forms import (
     AccountForm,
     CategoryForm,
     CreditCardForm,
     InvoiceForm,
     InitialSuperuserForm,
-    JournalEntryForm,
-    JournalLineFormSet,
     RecurringPaymentForm,
     TransactionForm,
 )
-from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine, RecurringPayment, SetupState
-from .product import feature_enabled, require_feature
+from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, RecurringPayment, SetupState
+from .product import require_feature
 from .security import is_login_locked
 from .services import advice_for_user, dashboard_summary, monthly_cash_flow_series
 
@@ -90,12 +86,6 @@ FREQUENCY_LABELS = {
     RecurringPayment.Frequency.YEARLY: {"es": "Anual", "en": "Yearly"},
 }
 
-EXECUTION_STATUS_LABELS = {
-    RecurringPayment.ExecutionStatus.SUCCESS: {"es": "Correcto", "en": "Success"},
-    RecurringPayment.ExecutionStatus.SKIPPED: {"es": "Sin cambios", "en": "No changes"},
-    RecurringPayment.ExecutionStatus.ERROR: {"es": "Error", "en": "Error"},
-}
-
 ACCOUNT_TYPE_LABELS = {
     Account.AccountType.CASH: {"es": "Efectivo", "en": "Cash"},
     Account.AccountType.CHECKING: {"es": "Cuenta corriente", "en": "Checking"},
@@ -108,6 +98,7 @@ ACCOUNT_TYPE_LABELS = {
     Account.AccountType.PAYABLE: {"es": "Cuenta por pagar", "en": "Payable"},
     Account.AccountType.CAPITAL: {"es": "Capital", "en": "Capital"},
 }
+
 
 ACCOUNT_TYPE_ICONS = {
     Account.AccountType.CASH: "Caja",
@@ -122,17 +113,20 @@ ACCOUNT_TYPE_ICONS = {
     Account.AccountType.CAPITAL: "Cap",
 }
 
+
 CATEGORY_TYPE_LABELS = {
     Category.CategoryType.INCOME: {"es": "Ingreso", "en": "Income"},
     Category.CategoryType.EXPENSE: {"es": "Gasto", "en": "Expense"},
     Category.CategoryType.TRANSFER: {"es": "Transferencia", "en": "Transfer"},
 }
 
+
 ACCOUNT_NAME_LABELS = {
     "Banco Principal": {"en": "Main Bank"},
     "Ahorro Emergencias": {"en": "Emergency Savings"},
     "Visa Personal": {"en": "Personal Visa"},
 }
+
 
 CATEGORY_NAME_LABELS = {
     "Nómina": {"en": "Payroll"},
@@ -145,6 +139,7 @@ CATEGORY_NAME_LABELS = {
     "Salud": {"en": "Health"},
     "Educación": {"en": "Education"},
 }
+
 
 
 def is_english(request):
@@ -349,218 +344,21 @@ def paginate_queryset(request, queryset, per_page=LIST_PAGE_SIZE):
     return paginator.get_page(request.GET.get("page"))
 
 
-def subscription_icon(service_name):
-    text = (service_name or "").lower()
-    icon_map = {
-        "spotify": "\U0001F3A7",
-        "youtube": "\u25B6\uFE0F",
-        "netflix": "\U0001F3AC",
-        "hbo": "\U0001F39E\uFE0F",
-        "disney": "\U0001F3F0",
-        "instagram": "\U0001F4F8",
-        "apple music": "\U0001F3B5",
-        "prime": "\U0001F4E6",
-        "salud": "\U0001F3E5",
-        "seguro": "\U0001F6E1\uFE0F",
-        "vida": "\U0001F49F",
-    }
-    for key, icon in icon_map.items():
-        if key in text:
-            return icon
-    return "\U0001F4CC"
+INSURANCE_PRESETS = {
+    "segurovida": "Seguro de vida privado",
+    "segurosalud": "Seguro de salud privado",
+    "seguroingreso": "Seguro de ingreso",
+}
 
 
-SUBSCRIPTION_PRESETS = [
-    {
-        "key": "spotify",
-        "name": "Spotify Premium",
-        "logo_static": "img/services/spotify.svg",
-        "default_amount": Decimal("6.99"),
-    },
-    {
-        "key": "youtube",
-        "name": "YouTube Premium",
-        "logo_static": "img/services/youtube.svg",
-        "default_amount": Decimal("11.99"),
-    },
-    {
-        "key": "netflix",
-        "name": "Netflix",
-        "logo_static": "img/services/netflix.svg",
-        "default_amount": Decimal("12.99"),
-    },
-    {
-        "key": "hbo",
-        "name": "Max",
-        "logo_url": "https://cdn.simpleicons.org/max/0046FE",
-        "default_amount": Decimal("9.99"),
-    },
-    {
-        "key": "disney",
-        "name": "Disney+",
-        "logo_static": "img/services/disneyplus_v2.png",
-        "default_amount": Decimal("8.99"),
-    },
-    {
-        "key": "prime",
-        "name": "Prime Video",
-        "logo_static": "img/services/primevideo_v2.png",
-        "default_amount": Decimal("5.99"),
-    },
-    {
-        "key": "paramount",
-        "name": "Paramount+",
-        "logo_url": "https://cdn.simpleicons.org/paramountplus/0064FF",
-        "default_amount": Decimal("7.99"),
-    },
-    {
-        "key": "appletv",
-        "name": "Apple TV+",
-        "logo_url": "https://cdn.simpleicons.org/appletv/000000",
-        "default_amount": Decimal("6.99"),
-    },
-    {
-        "key": "crunchyroll",
-        "name": "Crunchyroll",
-        "logo_url": "https://cdn.simpleicons.org/crunchyroll/F47521",
-        "default_amount": Decimal("9.99"),
-    },
-    {
-        "key": "gamepass",
-        "name": "Xbox Game Pass",
-        "logo_static": "img/services/xbox.svg",
-        "default_amount": Decimal("10.99"),
-    },
-    {
-        "key": "psplus",
-        "name": "PlayStation Plus",
-        "logo_url": "https://cdn.simpleicons.org/playstation/003791",
-        "default_amount": Decimal("9.99"),
-    },
-    {
-        "key": "googleone",
-        "name": "Google One",
-        "logo_static": "img/services/googleone.svg",
-        "default_amount": Decimal("1.99"),
-    },
-    {
-        "key": "icloud",
-        "name": "iCloud+",
-        "logo_url": "https://cdn.simpleicons.org/icloud/3693F3",
-        "default_amount": Decimal("2.99"),
-    },
-    {
-        "key": "dropbox",
-        "name": "Dropbox",
-        "logo_url": "https://cdn.simpleicons.org/dropbox/0061FF",
-        "default_amount": Decimal("11.99"),
-    },
-    {
-        "key": "chatgpt",
-        "name": "ChatGPT Plus",
-        "logo_static": "img/services/chatgpt.svg",
-        "default_amount": Decimal("20.00"),
-    },
-    {
-        "key": "claude",
-        "name": "Claude Pro",
-        "logo_url": "https://cdn.simpleicons.org/anthropic/111827",
-        "default_amount": Decimal("20.00"),
-    },
-    {
-        "key": "canva",
-        "name": "Canva Pro",
-        "logo_static": "img/services/canva.svg",
-        "default_amount": Decimal("12.99"),
-    },
-    {
-        "key": "notion",
-        "name": "Notion Plus",
-        "logo_url": "https://cdn.simpleicons.org/notion/000000",
-        "default_amount": Decimal("10.00"),
-    },
-    {
-        "key": "adobe",
-        "name": "Adobe Creative Cloud",
-        "logo_static": "img/services/adobe.svg",
-        "default_amount": Decimal("54.99"),
-    },
-    {
-        "key": "uberone",
-        "name": "Uber One",
-        "logo_url": "https://cdn.simpleicons.org/uber/000000",
-        "default_amount": Decimal("9.99"),
-    },
-    {
-        "key": "segurovida",
-        "name": "Seguro de vida privado",
-        "default_amount": Decimal("0.00"),
-        "category_name": "Seguros",
-        "catalog": "insurance",
-    },
-    {
-        "key": "segurosalud",
-        "name": "Seguro de salud privado",
-        "default_amount": Decimal("0.00"),
-        "category_name": "Seguros",
-        "catalog": "insurance",
-    },
-    {
-        "key": "seguroingreso",
-        "name": "Seguro de ingreso",
-        "default_amount": Decimal("0.00"),
-        "category_name": "Seguros",
-        "catalog": "insurance",
-    },
-]
-
-
-def subscription_preset_map():
-    return {preset["key"]: preset for preset in SUBSCRIPTION_PRESETS}
-
-
-def is_lite_edition():
-    return getattr(settings, "APP_EDITION", "demo") == "lite"
-
-
-def insurance_presets():
-    return [preset for preset in SUBSCRIPTION_PRESETS if preset.get("catalog") == "insurance"]
-
-
-def service_subscription_presets():
-    return [preset for preset in SUBSCRIPTION_PRESETS if preset.get("catalog") != "insurance"]
-
-
-def subscription_preset_initial(preset_key, user=None):
-    preset = subscription_preset_map().get(preset_key)
-    if not preset:
-        return None
-    initial = {
-        "name": preset["name"],
-        "amount": preset.get("default_amount", Decimal("0.00")),
+def subscription_preset_initial(preset_key, user):
+    return {
+        "name": INSURANCE_PRESETS[preset_key],
         "frequency": RecurringPayment.Frequency.MONTHLY,
         "next_due_date": timezone.localdate(),
-        "auto_create_transaction": True,
         "is_active": True,
+        "category": Category.objects.filter(user=user, name__iexact="Seguros").first(),
     }
-    category_name = preset.get("category_name")
-    if user and category_name:
-        category = Category.objects.filter(user=user, name__iexact=category_name).first()
-        if category:
-            initial["category"] = category
-    return initial
-
-
-def apply_subscription_policy(obj, preset_key):
-    preset = subscription_preset_map().get(preset_key, {})
-    obj.is_subscription = True
-    obj.subscription_catalog = (
-        RecurringPayment.SubscriptionCatalog.INSURANCE
-        if preset.get("catalog") == "insurance"
-        else RecurringPayment.SubscriptionCatalog.SERVICE
-    )
-    if is_lite_edition() and preset.get("name"):
-        obj.name = preset["name"]
 
 
 def category_helper_context():
@@ -655,11 +453,6 @@ def confirm_delete(request, instance, success_url, label):
 @login_required
 def dashboard(request):
     context = dashboard_summary(request.user)
-    if not feature_enabled("recurring"):
-        context["upcoming"] = [
-            payment for payment in context.get("upcoming", [])
-            if payment.is_subscription
-        ]
     context["advice"] = advice_for_user(request.user, context)
     english = is_english(request)
     context["cash_flow_series"] = monthly_cash_flow_series(request.user, english=english)
@@ -812,7 +605,6 @@ def transaction_list(request):
 
 @login_required
 def transaction_create(request):
-    system_accounts = get_transaction_system_accounts(request.user)
     return save_user_form(
         request,
         TransactionForm,
@@ -822,7 +614,7 @@ def transaction_create(request):
         "Registra ingresos, gastos, pagos de tarjeta, cobros o transferencias.",
         "Guardar movimiento",
         extra_context=category_helper_context(),
-        after_save=lambda obj: (sync_transaction_journal(obj, _system_accounts=system_accounts), rebuild_account_balances(request.user, force_account_ids=[obj.account_id, obj.destination_account_id, obj.related_credit_card.account_id if obj.related_credit_card else None])),
+        after_save=lambda obj: (sync_transaction_journal(obj), rebuild_account_balances(request.user, force_account_ids=[obj.account_id, obj.destination_account_id, obj.related_credit_card.account_id if obj.related_credit_card else None])),
     )
 
 
@@ -835,8 +627,6 @@ def transaction_edit(request, pk):
     if instance.related_credit_card_id and instance.related_credit_card:
         original_account_ids.add(instance.related_credit_card.account_id)
 
-    system_accounts = get_transaction_system_accounts(request.user)
-
     def after_transaction_edit(obj):
         account_ids = set(original_account_ids)
         account_ids.add(obj.account_id)
@@ -844,7 +634,7 @@ def transaction_edit(request, pk):
             account_ids.add(obj.destination_account_id)
         if obj.related_credit_card_id and obj.related_credit_card:
             account_ids.add(obj.related_credit_card.account_id)
-        sync_transaction_journal(obj, _system_accounts=system_accounts)
+        sync_transaction_journal(obj)
         rebuild_account_balances(request.user, force_account_ids=account_ids)
 
     return save_user_form(
@@ -873,6 +663,7 @@ def transaction_delete(request, pk):
             account_ids.add(instance.related_credit_card.account_id)
         try:
             with transaction.atomic():
+                lock_financial_user(request.user)
                 delete_transaction_journal(instance)
                 instance.delete()
                 rebuild_account_balances(request.user, force_account_ids=account_ids)
@@ -1074,112 +865,6 @@ def invoice_delete(request, pk):
 
 
 @login_required
-@require_feature("recurring")
-def recurring_list(request):
-    english = is_english(request)
-    queryset = (
-        RecurringPayment.objects.filter(user=request.user, is_subscription=False)
-        .select_related("account", "category")
-        .order_by("next_due_date", "name")
-    )
-    active_filter = request.GET.get("active", "all")
-    if active_filter == "active":
-        queryset = queryset.filter(is_active=True)
-    elif active_filter == "inactive":
-        queryset = queryset.filter(is_active=False)
-
-    overview = recurring_overview(queryset)
-    page_obj = paginate_queryset(request, queryset)
-    payments = list(page_obj)
-    for payment in payments:
-        payment.frequency_label_ui = localized_label(
-            FREQUENCY_LABELS,
-            payment.frequency,
-            english,
-            payment.get_frequency_display(),
-        )
-        payment.execution_status_label_ui = localized_label(
-            EXECUTION_STATUS_LABELS,
-            payment.last_execution_status,
-            english,
-            payment.get_last_execution_status_display() if payment.last_execution_status else "",
-        )
-        payment.active_label_ui = "Active" if english else "Activo"
-        payment.inactive_label_ui = "Inactive" if english else "Inactivo"
-
-    return render(
-        request,
-        "finanzas/recurring_list.html",
-        {
-            "payments": payments,
-            "page_obj": page_obj,
-            "filters": {"active": active_filter},
-            "summary_monthly_projection": overview["monthly_projection"],
-            "summary_due_next_30": overview["due_next_30"],
-            "summary_active_count": overview["active_count"],
-        },
-    )
-
-
-@login_required
-@require_feature("recurring")
-def recurring_create(request):
-    return save_user_form(
-        request,
-        RecurringPaymentForm,
-        "finanzas/form.html",
-        "finanzas:recurring_list",
-        "Nuevo pago recurrente",
-        "Programa obligaciones fijas y pagos periodicos.",
-        "Guardar recurrente",
-        extra_context=category_helper_context(),
-        instance_mutator=lambda obj: setattr(obj, "is_subscription", False),
-    )
-
-
-@login_required
-@require_feature("recurring")
-def recurring_edit(request, pk):
-    instance = get_object_or_404(RecurringPayment, pk=pk, user=request.user, is_subscription=False)
-    return save_user_form(
-        request,
-        RecurringPaymentForm,
-        "finanzas/form.html",
-        "finanzas:recurring_list",
-        "Editar pago recurrente",
-        "Actualiza monto, frecuencia o estado.",
-        "Guardar cambios",
-        instance=instance,
-        extra_context=category_helper_context(),
-        instance_mutator=lambda obj: setattr(obj, "is_subscription", False),
-    )
-
-
-@login_required
-@require_http_methods(["GET", "POST"])
-@require_feature("recurring")
-def recurring_delete(request, pk):
-    instance = get_object_or_404(RecurringPayment, pk=pk, user=request.user, is_subscription=False)
-    return confirm_delete(request, instance, "finanzas:recurring_list", "Pago recurrente")
-
-
-@login_required
-@require_http_methods(["POST"])
-@require_feature("recurring")
-def recurring_run_now(request):
-    stats = execute_due_recurrings_for_user(request.user, is_subscription=False)
-    messages.success(
-        request,
-        (
-            f"Ejecucion recurrentes: procesados {stats['processed']}, "
-            f"creados {stats['created_transactions']}, omitidos {stats['skipped_transactions']}, "
-            f"errores {stats['errors']}."
-        ),
-    )
-    return redirect("finanzas:recurring_list")
-
-
-@login_required
 @require_feature("subscriptions")
 def subscription_list(request):
     english = is_english(request)
@@ -1196,54 +881,20 @@ def subscription_list(request):
 
     overview = recurring_overview(queryset)
     page_obj = paginate_queryset(request, queryset)
-    subscriptions = list(page_obj)
-    preset_map = subscription_preset_map()
-    subscription_rows = []
-    for subscription in subscriptions:
-        icon = subscription_icon(subscription.name)
-        logo_static = None
-        logo_url = None
-        text = (subscription.name or "").lower()
-        for key, preset in preset_map.items():
-            if key in text:
-                logo_static = preset.get("logo_static")
-                logo_url = preset.get("logo_url")
-                break
+    for subscription in page_obj:
         subscription.frequency_label_ui = localized_label(
             FREQUENCY_LABELS,
             subscription.frequency,
             english,
             subscription.get_frequency_display(),
         )
-        subscription.execution_status_label_ui = localized_label(
-            EXECUTION_STATUS_LABELS,
-            subscription.last_execution_status,
-            english,
-            subscription.get_last_execution_status_display() if subscription.last_execution_status else "",
-        )
         subscription.active_label_ui = "Active" if english else "Activa"
-        subscription.inactive_label_ui = "Inactive" if english else "Inactiva"
-
-        subscription_rows.append(
-            {
-                "item": subscription,
-                "icon": icon,
-                "logo_static": logo_static,
-                "logo_url": logo_url,
-            }
-        )
 
     return render(
         request,
         "finanzas/subscription_list.html",
         {
-            "subscription_rows": subscription_rows,
             "page_obj": page_obj,
-            "subscription_presets": sorted(
-                [] if is_lite_edition() else service_subscription_presets(),
-                key=lambda p: p["name"].lower(),
-            ),
-            "insurance_presets": insurance_presets(),
             "filters": {"active": active_filter},
             "summary_monthly_projection": overview["monthly_projection"],
             "summary_due_next_30": overview["due_next_30"],
@@ -1261,20 +912,26 @@ def subscription_list(request):
 @require_feature("subscriptions")
 def subscription_create(request):
     preset_key = request.GET.get("preset", "").strip()
-    if is_lite_edition() and preset_key not in {preset["key"] for preset in insurance_presets()}:
-        messages.info(request, "Moneta Lite permite agregar suscripciones solo desde Seguros privados.")
-        return redirect("finanzas:subscription_list")
-    initial_data = subscription_preset_initial(preset_key, request.user)
+    if preset_key and preset_key not in INSURANCE_PRESETS:
+        raise Http404
+    initial_data = subscription_preset_initial(preset_key, request.user) if preset_key else {}
+
+    def mark_subscription(obj):
+        obj.is_subscription = True
+        if preset_key:
+            obj.name = INSURANCE_PRESETS[preset_key]
+            obj.subscription_catalog = RecurringPayment.SubscriptionCatalog.INSURANCE
+
     return save_user_form(
         request,
         RecurringPaymentForm,
         "finanzas/form.html",
         "finanzas:subscription_list",
         "Nueva suscripción",
-        "Registra servicios, afiliaciones y cargos automaticos.",
+        "Registra servicios, afiliaciones y seguros.",
         "Guardar suscripción",
         extra_context=category_helper_context(),
-        instance_mutator=lambda obj: apply_subscription_policy(obj, preset_key),
+        instance_mutator=mark_subscription,
         initial_data=initial_data,
     )
 
@@ -1282,17 +939,13 @@ def subscription_create(request):
 @login_required
 @require_feature("subscriptions")
 def subscription_edit(request, pk):
-    filters = {"pk": pk, "user": request.user, "is_subscription": True}
-    if is_lite_edition():
-        filters["subscription_catalog"] = RecurringPayment.SubscriptionCatalog.INSURANCE
-    instance = get_object_or_404(RecurringPayment, **filters)
+    instance = get_object_or_404(RecurringPayment, pk=pk, user=request.user, is_subscription=True)
+
     policy_name = instance.name
 
-    def preserve_subscription_policy(obj):
-        obj.is_subscription = True
-        if is_lite_edition():
+    def preserve_insurance_name(obj):
+        if obj.subscription_catalog == RecurringPayment.SubscriptionCatalog.INSURANCE:
             obj.name = policy_name
-            obj.subscription_catalog = RecurringPayment.SubscriptionCatalog.INSURANCE
 
     return save_user_form(
         request,
@@ -1304,7 +957,7 @@ def subscription_edit(request, pk):
         "Guardar cambios",
         instance=instance,
         extra_context=category_helper_context(),
-        instance_mutator=preserve_subscription_policy,
+        instance_mutator=preserve_insurance_name,
     )
 
 
@@ -1314,22 +967,6 @@ def subscription_edit(request, pk):
 def subscription_delete(request, pk):
     instance = get_object_or_404(RecurringPayment, pk=pk, user=request.user, is_subscription=True)
     return confirm_delete(request, instance, "finanzas:subscription_list", "Suscripcion")
-
-
-@login_required
-@require_http_methods(["POST"])
-@require_feature("subscriptions")
-def subscription_run_now(request):
-    stats = execute_due_recurrings_for_user(request.user, is_subscription=True)
-    messages.success(
-        request,
-        (
-            f"Ejecución suscripciones: procesados {stats['processed']}, "
-            f"creados {stats['created_transactions']}, omitidos {stats['skipped_transactions']}, "
-            f"errores {stats['errors']}."
-        ),
-    )
-    return redirect("finanzas:subscription_list")
 
 
 @login_required
@@ -1385,63 +1022,6 @@ def credit_card_delete(request, pk):
 
 
 @login_required
-@require_feature("ledger")
-def ledger(request):
-    entries = JournalEntry.objects.filter(user=request.user).prefetch_related("lines__account")
-    page_obj = paginate_queryset(request, entries)
-    return render(request, "finanzas/ledger.html", {"entries": list(page_obj), "page_obj": page_obj})
-
-
-@login_required
-@require_feature("ledger")
-def ledger_create(request):
-    if request.method == "POST":
-        form = JournalEntryForm(request.POST, user=request.user)
-        formset = JournalLineFormSet(request.POST, form_kwargs={"user": request.user})
-        if form.is_valid() and formset.is_valid():
-            lines = [line_form.cleaned_data for line_form in formset if not line_form.is_empty()]
-            debit_total = sum((line.get("debit") or Decimal("0.00")) for line in lines)
-            credit_total = sum((line.get("credit") or Decimal("0.00")) for line in lines)
-            if len(lines) < 2:
-                messages.error(request, "El asiento necesita al menos dos lineas.")
-            elif debit_total != credit_total:
-                messages.error(request, "El asiento no esta balanceado: Debe y Haber deben ser iguales.")
-            else:
-                with transaction.atomic():
-                    entry = form.save(commit=False)
-                    entry.user = request.user
-                    entry.full_clean()
-                    entry.save()
-                    for line in lines:
-                        journal_line = JournalLine(
-                            entry=entry,
-                            account=line["account"],
-                            memo=line.get("memo", ""),
-                            debit=line.get("debit") or Decimal("0.00"),
-                            credit=line.get("credit") or Decimal("0.00"),
-                        )
-                        journal_line.full_clean()
-                        journal_line.save()
-                messages.success(request, "Asiento contable guardado correctamente.")
-                return redirect("finanzas:ledger")
-    else:
-        form = JournalEntryForm(user=request.user)
-        formset = JournalLineFormSet(form_kwargs={"user": request.user})
-
-    return render(
-        request,
-        "finanzas/journal_entry_form.html",
-        {
-            "form": form,
-            "formset": formset,
-            "title": "Nuevo asiento contable",
-            "subtitle": "Registra lineas Debe/Haber. El total Debe debe ser igual al total Haber.",
-            "cancel_url": "finanzas:ledger",
-        },
-    )
-
-
-@login_required
 def reports(request):
     context = dashboard_summary(request.user)
     english = is_english(request)
@@ -1449,13 +1029,6 @@ def reports(request):
     for row in context.get("expense_breakdown", []):
         row["category_name_ui"] = localized_name(CATEGORY_NAME_LABELS, row.get("category__name"), english)
     return render(request, "finanzas/reports.html", context)
-
-
-@login_required
-@require_feature("net_income")
-def net_income(request):
-    context = dashboard_summary(request.user)
-    return render(request, "finanzas/net_income.html", context)
 
 
 @login_required
@@ -1575,62 +1148,6 @@ def export_invoices_csv(request):
                 sanitize_csv_cell(invoice.tax),
                 sanitize_csv_cell(invoice.total),
                 sanitize_csv_cell(invoice.get_status_display()),
-            ]
-        )
-    return response
-
-
-@login_required
-@require_feature("exports_advanced")
-def export_recurring_csv(request):
-    response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = 'attachment; filename="recurrentes.csv"'
-    writer = csv.writer(response)
-    writer.writerow(["Nombre", "Cuenta", "Categoria", "Frecuencia", "Proximo pago", "Monto", "Activo"])
-
-    payments = (
-        RecurringPayment.objects.filter(user=request.user, is_subscription=False)
-        .select_related("account", "category")
-        .order_by("next_due_date", "name")[:EXPORT_ROW_LIMIT]
-    )
-    for payment in payments:
-        writer.writerow(
-            [
-                sanitize_csv_cell(payment.name),
-                sanitize_csv_cell(payment.account.name),
-                sanitize_csv_cell(payment.category.name if payment.category else ""),
-                sanitize_csv_cell(payment.get_frequency_display()),
-                sanitize_csv_cell(payment.next_due_date),
-                sanitize_csv_cell(payment.amount),
-                sanitize_csv_cell("Si" if payment.is_active else "No"),
-            ]
-        )
-    return response
-
-
-@login_required
-@require_feature("exports_advanced")
-def export_subscriptions_csv(request):
-    response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = 'attachment; filename="suscripciones.csv"'
-    writer = csv.writer(response)
-    writer.writerow(["Servicio", "Metodo", "Categoria", "Frecuencia", "Proximo cobro", "Monto", "Activa"])
-
-    subscriptions = (
-        RecurringPayment.objects.filter(user=request.user, is_subscription=True)
-        .select_related("account", "category")
-        .order_by("next_due_date", "name")[:EXPORT_ROW_LIMIT]
-    )
-    for subscription in subscriptions:
-        writer.writerow(
-            [
-                sanitize_csv_cell(subscription.name),
-                sanitize_csv_cell(subscription.account.name),
-                sanitize_csv_cell(subscription.category.name if subscription.category else ""),
-                sanitize_csv_cell(subscription.get_frequency_display()),
-                sanitize_csv_cell(subscription.next_due_date),
-                sanitize_csv_cell(subscription.amount),
-                sanitize_csv_cell("Si" if subscription.is_active else "No"),
             ]
         )
     return response

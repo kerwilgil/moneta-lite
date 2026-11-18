@@ -67,7 +67,7 @@ El fingerprint v2 se calcula sobre:
   guardarse.
 - La creación de borradores es **idempotente** por `external_id`.
 - La aprobación es **atómica**: si algo falla, se revierte por completo
-  (`rollback`) y el borrador queda en `error`, sin dejar un `FinancialTransaction`
+  (`rollback`) y el borrador sigue `pending` para corregirlo o reintentar, sin dejar un `FinancialTransaction`
   a medias.
 - Un borrador aprobado queda **enlazado** a su `FinancialTransaction`.
 - **MCP no aprueba.** El scope `draft` sólo puede crear, editar, listar y
@@ -85,6 +85,19 @@ borrador pendiente puedes:
 - **Editar**: ajustar cuenta, categoría, importe, fecha o descripción.
 - **Aprobar**: convertirlo en un movimiento real.
 - **Rechazar**: descartarlo (queda registrado, no se borra).
+
+La moneda del borrador debe coincidir con la cuenta. Las transferencias y los
+pagos de tarjeta requieren cuentas de la misma moneda; no hay conversión de
+divisas automática. Para `card_payment`, selecciona la **cuenta de la tarjeta
+pagada** como cuenta destino (`destination_account_id` en MCP). La aprobación
+resuelve la tarjeta del propietario y actualiza su deuda junto con el saldo de
+la cuenta de origen. Sin tarjeta válida el borrador permanece pendiente.
+
+En PostgreSQL, las operaciones de importación se serializan por usuario antes
+de comprobar duplicados o bloquear filas. Una repetición MCP con el mismo
+identificador devuelve el borrador existente. SQLite conserva sus restricciones
+de escritor único: ante un bloqueo o timeout, reintenta con el mismo identificador;
+un fallo no confirma parcialmente el movimiento.
 
 ---
 

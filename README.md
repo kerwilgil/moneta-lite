@@ -10,7 +10,7 @@
     <img alt="Django" src="https://img.shields.io/badge/Django-6.0-0b5f3a?style=flat-square&logo=django&logoColor=white">
     <img alt="Database" src="https://img.shields.io/badge/DB-SQLite%20%7C%20PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white">
     <img alt="MCP" src="https://img.shields.io/badge/MCP-2026--07--28-6f42c1?style=flat-square">
-    <img alt="Tests" src="https://img.shields.io/badge/tests-182%20passing-2ea44f?style=flat-square">
+    <a href="https://github.com/kerwilgil/moneta-lite/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/kerwilgil/moneta-lite/actions/workflows/ci.yml/badge.svg"></a>
     <img alt="i18n" src="https://img.shields.io/badge/i18n-ES%20%7C%20EN-1f6feb?style=flat-square">
     <img alt="License" src="https://img.shields.io/badge/License-MIT-c9a227?style=flat-square">
   </p>
@@ -94,7 +94,7 @@ Detalle: [`CHANGELOG.md`](CHANGELOG.md) · [`docs/release-notes/v0.3.0.md`](docs
 - Tarjetas de crédito — límite, saldo, disponible, uso %, pago mínimo y de contado, corte y pago.
 - Suscripciones y seguros privados (vida, salud, ingreso).
 - Reportes — activos, pasivos, capital neto, flujo del mes y presupuesto por categoría.
-- Exportación CSV de movimientos, facturas y suscripciones.
+- Exportación CSV básica de movimientos y facturas.
 
 **Automatización e inteligencia**
 
@@ -220,7 +220,6 @@ Crea `.env` a partir de [`.env.example`](.env.example).
 | `DJANGO_ALLOWED_HOSTS` | Dominios/IP permitidos. | En producción | `127.0.0.1,localhost` |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | Orígenes HTTPS de confianza (`https://tu-dominio`). | Si hay proxy/dominio | vacío |
 | `DJANGO_SECURE_SSL_REDIRECT` | Forzar HTTPS. | Producción con HTTPS | `1` |
-| `SAAS_EDITION` | Edición activa. | — | `lite` |
 | `SAAS_APP_NAME` | Nombre visible de la app. | — | `Moneta Lite` |
 | `DB_ENGINE` / `DB_NAME` / `DB_USER` / … | Backend de base de datos (ver comentarios en `.env.example` para PostgreSQL). | — | SQLite |
 | `MONETA_MCP_TOKEN` | Token para el transporte MCP stdio (no se pasa como argumento CLI). | Sólo MCP stdio | — |
@@ -229,14 +228,14 @@ No subas `.env`, `db.sqlite3` ni `logs/` al repositorio (ya están en `.gitignor
 
 ## Lite vs Pro
 
-La tabla refleja los *feature gates* reales del código (`finanzas/product.py`).
+El paquete público trae únicamente las funciones Lite. Las configuraciones históricas de `SAAS_EDITION`, incluido `pro`, siempre cargan Lite.
 
 | Módulo | Lite | Pro |
 |--------|:----:|:---:|
 | Dashboard, cuentas, movimientos | ✅ | ✅ |
 | Facturas (emitidas / recibidas) | ✅ | ✅ |
 | Tarjetas de crédito | ✅ | ✅ |
-| Suscripciones + seguros privados | ✅ | ✅ |
+| Registro manual de suscripciones y seguros privados | ✅ | ✅ |
 | Reportes y presupuesto por categoría | ✅ | ✅ |
 | Exportación CSV básica | ✅ | ✅ |
 | Cola de importaciones | ✅ | ✅ |
@@ -244,13 +243,15 @@ La tabla refleja los *feature gates* reales del código (`finanzas/product.py`).
 | Bilingüe ES/EN + modo claro/oscuro | ✅ | ✅ |
 | Pagos recurrentes automáticos | — | ✅ |
 | Catálogo completo de suscripciones | — | ✅ |
-| Libro contable | — | ✅ |
+| Libro contable avanzado y asientos manuales | — | ✅ |
 | Ingreso neto (simulación salarial) | — | ✅ |
 | Exportaciones avanzadas | — | ✅ |
 | Licencia | MIT | Comercial, no redistribuible |
 
 Moneta Pro es la edición de pago con los módulos avanzados. Moneta Lite es
-completamente funcional por sí sola.
+completamente funcional por sí sola. Conserva el motor de saldos y asientos
+que requieren movimientos y facturas. El código ya publicado bajo MIT
+conserva los derechos concedidos por esa licencia.
 
 ## Cola de importaciones
 
@@ -340,8 +341,8 @@ Política y reporte de vulnerabilidades: [`SECURITY.md`](SECURITY.md).
 ## Idiomas
 
 Interfaz y contenido en `es-pa`, `es` y `en`. El idioma se puede cambiar desde la
-propia interfaz. Manual de usuario en [`docs/manual/`](docs/manual/) (ES y EN,
-Markdown, HTML y PDF).
+propia interfaz. La [guía vigente](docs/user-guide/) complementa el centro de ayuda.
+Los [manuales HTML y PDF de v0.3.0](docs/manual/) se conservan como referencia histórica.
 
 ## Self-hosting
 
@@ -368,12 +369,10 @@ SQLite/PostgreSQL. Sin build de frontend.
 python manage.py test
 ```
 
-Baseline: **182 tests**, `0 fallos`, `0 errores`, más las suites del centro de ayuda.
-
-| Backend | Resultado |
-|---------|-----------|
-| SQLite | 182 passed, 6 skipped (2 `exports_advanced` + 4 solo PostgreSQL) |
-| PostgreSQL | 182 passed, 2 skipped (`exports_advanced`) |
+CI prueba Python 3.12–3.14 en SQLite y PostgreSQL, instala desde cero y
+compara los datos sintéticos antes y después de actualizar desde v0.3.0.
+Consulta las [notas de mantenimiento de v0.3.1](docs/release-notes/v0.3.1.md)
+para el procedimiento de actualización y el control de distribución.
 
 Para ejecutar contra PostgreSQL, define las variables `DB_*` y vuelve a lanzar
 `python manage.py test` (ver [`docs/postgresql.md`](docs/postgresql.md)).
@@ -392,7 +391,7 @@ Para ejecutar contra PostgreSQL, define las variables `DB_*` y vuelve a lanzar
 | [`FAQ.md`](FAQ.md) | Preguntas frecuentes. |
 | [`SUPPORT.md`](SUPPORT.md) | Alcance del soporte. |
 | [`CHANGELOG.md`](CHANGELOG.md) · [`docs/release-notes/v0.3.0.md`](docs/release-notes/v0.3.0.md) | Historial de cambios y notas de versión. |
-| [`docs/manual/`](docs/manual/) | Manual de usuario en HTML/PDF (ES / EN). |
+| [`docs/manual/`](docs/manual/) | Manual histórico de v0.3.0 en HTML/PDF (ES / EN). |
 
 ## Roadmap
 
@@ -402,7 +401,8 @@ Para ejecutar contra PostgreSQL, define las variables `DB_*` y vuelve a lanzar
 - [x] Servidor Moneta MCP (`2026-07-28`, stdio + Streamable HTTP).
 - [x] Centro de ayuda dentro de la aplicación (ES/EN).
 - [x] Integración PostgreSQL validada contra una instancia real (18.6).
-- [ ] Publicación de `v0.3.0` (tras la auditoría posterior).
+- [x] Publicación de `v0.3.0`.
+- [ ] Publicación de mantenimiento `v0.3.1`.
 
 ## Licencia
 

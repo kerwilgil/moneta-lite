@@ -110,18 +110,6 @@ class Command(BaseCommand):
 
         RecurringPayment.objects.get_or_create(
             user=user,
-            name="Internet residencial",
-            defaults={
-                "account": bank,
-                "category": category_objs["Software"],
-                "amount": Decimal("55.00"),
-                "frequency": RecurringPayment.Frequency.MONTHLY,
-                "next_due_date": today.replace(day=min(today.day, 28)),
-                "is_subscription": False,
-            },
-        )
-        RecurringPayment.objects.get_or_create(
-            user=user,
             name="Streaming familiar",
             defaults={
                 "account": card_account,

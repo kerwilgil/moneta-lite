@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.3.1] — Unreleased
+
+### Fixed
+
+- Scope Django admin financial records and related choices to ordinary staff
+  owners; keep transaction and invoice accounting changes atomic in admin.
+- Enforce draft reviewer ownership, preserve currency integrity, handle invalid
+  approvals as review errors, and allow clearing optional draft relations.
+- Resolve imported card payments through the owner's destination card account.
+- Serialize PostgreSQL imports before deduplication and financial mutations;
+  use the same lock order for transaction deletion.
+- Keep transaction form GET requests free of system-account creation.
+- Give subprocess tests a stable synthetic key without relying on a local `.env`.
+
+### Added
+
+- Financial, admin isolation, timeout/rollback and concurrent import regressions.
+- CI for Python 3.12–3.14 with SQLite/PostgreSQL, deploy checks, dependency audit
+  and redacted Gitleaks scans of the public tree and history.
+- CI checks the Lite distribution file manifest and compares synthetic data
+  before and after upgrading from the v0.3.0 tag.
+
+### Removed from the Lite distribution
+
+- Automatic recurring payment execution, the manual ledger UI and admin,
+  salary simulation, the preset service catalog and advanced CSV exports.
+- Runtime edition switching. Legacy recurring and journal data remains in the
+  database. Manual subscriptions, insurance, basic CSV and all 15 MCP tools
+  remain available.
+
 ## [0.3.0] — 2026-09-10 (Intelligence & Interoperability)
 
 _Release estable validado tras la auditoría final posterior a Phase 8._

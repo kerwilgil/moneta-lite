@@ -2,11 +2,10 @@
 
 from django.contrib.auth import get_user_model
 from django.template.loader import get_template
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from finanzas import help as help_mod
-from finanzas.product import edition_features
 
 
 class HelpCenterTests(TestCase):
@@ -66,7 +65,6 @@ class HelpCenterTests(TestCase):
                 self.assertContains(resp, "help-inline")
 
 
-@override_settings(APP_EDITION="lite", APP_FEATURES=edition_features("lite"))
 class HelpCenterLiteGateTests(TestCase):
     """Lite must not advertise Pro-only modules in the Help Center."""
 

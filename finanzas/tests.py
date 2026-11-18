@@ -1,4 +1,4 @@
-﻿from datetime import date
+from datetime import date
 from decimal import Decimal
 import hashlib
 import os
@@ -19,10 +19,8 @@ from django.utils import timezone
 from django.conf import settings
 
 from .accounting import rebuild_account_balances, sync_credit_card_account_balance
-from .automation import execute_due_recurrings_for_user
 from .forms import CreditCardForm, InitialSuperuserForm, InvoiceForm, RecurringPaymentForm, TransactionForm
 from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, JournalLine, LoginThrottle, RecurringPayment
-from .product import edition_features
 from .security import client_ip
 from .services import mark_overdue_invoices, monthly_cash_flow_series
 from .views import recurring_overview
@@ -308,25 +306,15 @@ class FinanceLogicTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             FinancialTransaction.objects.create(**values)
 
-    @override_settings(MONETA_RECURRING_BATCH_SIZE=2, MONETA_RECURRING_MAX_CYCLES=1)
-    def test_recurring_execution_is_bounded(self):
-        for index in range(3):
-            RecurringPayment.objects.create(
-                user=self.user,
-                name=f"Recurrente {index}",
-                account=self.checking,
-                category=self.expense_category,
-                amount=Decimal("10.00"),
-                next_due_date=date(2026, 4, 1),
-                auto_create_transaction=True,
-            )
-        stats = execute_due_recurrings_for_user(self.user, run_date=date(2026, 4, 1))
-        self.assertEqual(stats["processed"], 2)
-        self.assertEqual(stats["created_transactions"], 2)
+    def test_recurring_automation_command_is_absent(self):
+        from django.core.management import get_commands
+        from importlib.util import find_spec
+
+        self.assertNotIn("run_recurring", get_commands())
+        self.assertIsNone(find_spec("finanzas.automation"))
 
 
-@override_settings(APP_EDITION="pro", APP_FEATURES=edition_features("pro"), ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"])
-@unittest.skipIf("recurring" not in edition_features("pro"), "Pro feature set is not available in this package.")
+@override_settings(ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"])
 class FinanceViewSmokeTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="admin", password="admin")
@@ -378,12 +366,9 @@ class FinanceViewSmokeTests(TestCase):
             "finanzas:dashboard",
             "finanzas:transaction_list",
             "finanzas:invoice_list",
-            "finanzas:recurring_list",
             "finanzas:subscription_list",
             "finanzas:credit_card_list",
-            "finanzas:ledger",
             "finanzas:reports",
-            "finanzas:net_income",
             "finanzas:settings",
         ]
         for route_name in route_names:
@@ -401,7 +386,7 @@ class FinanceViewSmokeTests(TestCase):
         second = self.client.get(url)
         self.assertEqual(second.status_code, 200)
 
-    def test_create_account_category_invoice_transaction_recurring_subscription_and_card(self):
+    def test_create_account_category_invoice_transaction_subscription_and_card(self):
         response = self.client.post(
             reverse("finanzas:account_create"),
             {
@@ -471,22 +456,6 @@ class FinanceViewSmokeTests(TestCase):
         self.assert_redirect_success(response, reverse("finanzas:transaction_list"))
 
         response = self.client.post(
-            reverse("finanzas:recurring_create"),
-            {
-                "name": "Pago recurrente",
-                "account": self.checking.id,
-                "category": self.expense_category.id,
-                "transaction_type": "expense",
-                "amount": "15.00",
-                "frequency": RecurringPayment.Frequency.MONTHLY,
-                "next_due_date": "2026-05-10",
-                "auto_create_transaction": "on",
-                "is_active": "on",
-            },
-        )
-        self.assert_redirect_success(response, reverse("finanzas:recurring_list"))
-
-        response = self.client.post(
             reverse("finanzas:subscription_create"),
             {
                 "name": "Seguro vida",
@@ -522,8 +491,6 @@ class FinanceViewSmokeTests(TestCase):
         export_routes = [
             "finanzas:export_transactions_csv",
             "finanzas:export_invoices_csv",
-            "finanzas:export_recurring_csv",
-            "finanzas:export_subscriptions_csv",
         ]
         for route_name in export_routes:
             with self.subTest(route=route_name):
@@ -617,7 +584,7 @@ class LoginLockoutTests(TestCase):
         self.assertEqual(client_ip(trusted), "203.0.113.7")
 
 
-@override_settings(APP_EDITION="lite", APP_FEATURES=edition_features("lite"), ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"])
+@override_settings(ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"])
 class LiteEditionGateTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="lite", password="admin")
@@ -668,24 +635,16 @@ class LiteEditionGateTests(TestCase):
         dashboard_response = self.client.get(reverse("finanzas:dashboard"))
         self.assertNotContains(dashboard_response, "Recurrente exclusivo Pro")
         self.assertContains(dashboard_response, "Suscripcion visible Lite")
-        self.assertNotContains(dashboard_response, reverse("finanzas:recurring_list"))
-        self.assertNotContains(dashboard_response, reverse("finanzas:net_income"))
         self.assertNotContains(dashboard_response, "Ingreso neto mensual")
+        for path in ("/recurrentes/", "/recurrentes/nuevo/", "/recurrentes/ejecutar/",
+                     "/recurrentes/1/editar/", "/recurrentes/1/eliminar/",
+                     "/libro-contable/", "/libro-contable/nuevo/", "/ingreso-neto/"):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, 404)
+                self.assertEqual(self.client.post(path).status_code, 404)
 
-        blocked_routes = [
-            "finanzas:recurring_list",
-            "finanzas:ledger",
-            "finanzas:net_income",
-        ]
-        for route_name in blocked_routes:
-            with self.subTest(route=route_name):
-                response = self.client.get(reverse(route_name))
-                self.assertEqual(response.status_code, 302)
-                self.assertEqual(response.headers["Location"], reverse("finanzas:dashboard"))
-
-        response = self.client.get(reverse("finanzas:subscription_create"))
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["Location"], reverse("finanzas:subscription_list"))
+        self.assertEqual(self.client.get(reverse("finanzas:subscription_create")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("finanzas:subscription_create") + "?preset=netflix").status_code, 404)
 
         response = self.client.get(reverse("finanzas:subscription_create") + "?preset=segurovida")
         self.assertEqual(response.status_code, 200)
@@ -707,7 +666,7 @@ class LiteEditionGateTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("category", form.errors)
 
-    def test_lite_cannot_forge_or_rename_a_service_subscription(self):
+    def test_lite_preserves_insurance_policy_with_forged_fields(self):
         expense = Category.objects.create(
             user=self.user,
             name="Seguros Lite",
@@ -729,11 +688,14 @@ class LiteEditionGateTests(TestCase):
         self.assertEqual(subscription.name, "Seguro de vida privado")
         self.assertEqual(subscription.subscription_catalog, RecurringPayment.SubscriptionCatalog.INSURANCE)
 
+        self.assertFalse(subscription.auto_create_transaction)
         payload["name"] = "Netflix"
+        payload["auto_create_transaction"] = "on"
         response = self.client.post(reverse("finanzas:subscription_edit", args=[subscription.pk]), payload)
         self.assertEqual(response.status_code, 302)
         subscription.refresh_from_db()
         self.assertEqual(subscription.name, "Seguro de vida privado")
+        self.assertFalse(subscription.auto_create_transaction)
 
 
 @override_settings(
@@ -1040,11 +1002,8 @@ class Phase2CorrectnessTests(TestCase):
         expected = Decimal("1000.00") - Decimal("1500.00")
         self.assertEqual(self.checking.current_balance, expected)
 
-    def test_recurring_max_cycles_default(self):
-        """C-02: Recurring max_cycles should default to a reasonable value."""
-        from django.conf import settings
-        # Default should be 12, not 24
-        self.assertEqual(getattr(settings, "MONETA_RECURRING_MAX_CYCLES", 12), 12)
+    def test_legacy_recurring_switches_cannot_enable_automation(self):
+        self.assertFalse(hasattr(settings, "MONETA_RECURRING_MAX_CYCLES"))
 
     def test_unique_recurring_occurrence_sqlite_compat(self):
         """DB-03/C-05: Unique constraint on recurring occurrence should handle SQLite."""
@@ -1118,42 +1077,19 @@ class Phase3PostgresIntegrationTests(TransactionTestCase):
                 connection.close()
         return wrapped
 
-    @unittest.skipIf(
-        connection.vendor == "sqlite",
-        "SQLite does not support concurrent writes; test requires PostgreSQL",
-    )
-    def test_recurring_concurrent_execution(self):
-        """T-02: Concurrent recurring execution should be safe with select_for_update."""
-        from threading import Thread
-
+    def test_subscription_post_cannot_run_legacy_automation(self):
         recurring = RecurringPayment.objects.create(
-            user=self.user,
-            name="Concurrent Recurring",
-            account=self.checking,
-            category=self.expense_category,
-            amount=Decimal("10.00"),
-            next_due_date=timezone.localdate(),
+            user=self.user, name="Legacy rule", account=self.checking,
+            category=self.expense_category, amount=Decimal("10.00"),
+            next_due_date=timezone.localdate(), is_subscription=True,
             auto_create_transaction=True,
         )
-
-        errors = []
-
-        def run_recurring():
-            try:
-                execute_due_recurrings_for_user(self.user, run_date=timezone.localdate())
-            except Exception as e:  # noqa: BLE001
-                errors.append(e)
-
-        threads = [Thread(target=self._worker(run_recurring)) for _ in range(3)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        self.assertEqual(len(errors), 0, f"Concurrent execution errors: {errors}")
-        txs = FinancialTransaction.objects.filter(user=self.user, source_recurring=recurring)
-        # One cycle ahead only, and the occurrence is idempotent.
-        self.assertEqual(txs.exclude(status=FinancialTransaction.Status.VOID).count(), 1)
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.post("/suscripciones/ejecutar/").status_code, 404)
+        recurring.refresh_from_db()
+        self.assertTrue(recurring.auto_create_transaction)
+        self.assertIsNone(recurring.last_execution_at)
+        self.assertFalse(FinancialTransaction.objects.filter(source_recurring=recurring).exists())
 
     @unittest.skipIf(
         connection.vendor == "sqlite",
@@ -1665,49 +1601,11 @@ class Phase3TestHardeningTests(TestCase):
         self.assertIn("INV-001", content)
         self.assertIn("Test Client", content)
 
-    @unittest.skipIf(
-        getattr(settings, "APP_EDITION", "demo") == "lite",
-        "Lite edition does not have exports_advanced feature for recurring exports"
-    )
-    def test_csv_recurring_content_headers(self):
-        """T-04: Recurring CSV export should have correct headers and content."""
-        RecurringPayment.objects.create(
-            user=self.user,
-            name="Test Recurring",
-            account=self.checking,
-            category=self.expense_category,
-            amount=Decimal("25.00"),
-            frequency=RecurringPayment.Frequency.MONTHLY,
-            next_due_date=timezone.localdate(),
-        )
-        url = reverse("finanzas:export_recurring_csv")
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        content = response.content.decode("utf-8")
-        self.assertIn("Test Recurring", content)
-        self.assertIn("25.00", content)
+    def test_recurring_csv_route_is_absent(self):
+        self.assertEqual(self.client.get("/exportar/recurrentes.csv").status_code, 404)
 
-    @unittest.skipIf(
-        getattr(settings, "APP_EDITION", "demo") == "lite",
-        "Lite edition does not have exports_advanced feature for subscription exports"
-    )
-    def test_csv_subscriptions_content_headers(self):
-        """T-04: Subscription CSV export should have correct headers and content."""
-        RecurringPayment.objects.create(
-            user=self.user,
-            name="Test Subscription",
-            account=self.checking,
-            category=self.expense_category,
-            amount=Decimal("15.00"),
-            frequency=RecurringPayment.Frequency.MONTHLY,
-            next_due_date=timezone.localdate(),
-            is_subscription=True,
-        )
-        url = reverse("finanzas:export_subscriptions_csv")
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        content = response.content.decode("utf-8")
-        self.assertIn("Test Subscription", content)
+    def test_subscription_csv_route_is_absent(self):
+        self.assertEqual(self.client.get("/exportar/suscripciones.csv").status_code, 404)
 
     def test_csv_formula_injection_prevention(self):
         """T-04: CSV export should prevent formula injection (=, +, -, @)."""
@@ -1746,61 +1644,37 @@ class Phase3TestHardeningTests(TestCase):
         content = response.content.decode("utf-8")
         self.assertIn("Gasto con ñ y €", content)
 
-    # T-05: Feature gates for all editions
-    def test_gates_demo_edition(self):
-        """T-05: Demo edition should have all features enabled."""
-        from finanzas.product import edition_features
-        demo_features = edition_features("demo")
-        expected_features = {
-            "reports", "transactions", "invoices", "recurring",
-            "subscriptions", "credit_cards", "ledger", "net_income",
-            "settings", "admin_link", "exports_basic", "exports_advanced",
-        }
-        self.assertEqual(demo_features, expected_features)
+    def assert_lite_settings(self, edition):
+        import os
+        import subprocess
+        import sys
 
-    def test_gates_pro_edition(self):
-        """T-05: Pro edition should have all features enabled."""
-        from finanzas.product import edition_features
-        pro_features = edition_features("pro")
-        expected_features = {
-            "reports", "transactions", "invoices", "recurring",
-            "subscriptions", "credit_cards", "ledger", "net_income",
-            "settings", "admin_link", "exports_basic", "exports_advanced",
-        }
-        self.assertEqual(pro_features, expected_features)
+        result = subprocess.run(
+            [sys.executable, "-c",
+             "from config.settings import APP_EDITION, APP_FEATURES; "
+             "assert APP_EDITION == 'lite'; "
+             "assert APP_FEATURES == {'reports', 'transactions', 'invoices', "
+             "'subscriptions', 'credit_cards', 'settings', 'admin_link', 'exports_basic'}"],
+            env={**os.environ, "SAAS_EDITION": edition, "DJANGO_DEBUG": "1"},
+            capture_output=True, text=True, timeout=15,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_gates_personal_edition(self):
-        """T-05: Personal edition should have all features enabled."""
-        from finanzas.product import edition_features
-        personal_features = edition_features("personal")
-        expected_features = {
-            "reports", "transactions", "invoices", "recurring",
-            "subscriptions", "credit_cards", "ledger", "net_income",
-            "settings", "admin_link", "exports_basic", "exports_advanced",
-        }
-        self.assertEqual(personal_features, expected_features)
 
-    def test_gates_lite_edition(self):
-        """T-05: Lite edition should have restricted features."""
-        from finanzas.product import edition_features
-        lite_features = edition_features("lite")
-        expected_features = {
-            "reports", "transactions", "invoices", "subscriptions",
-            "credit_cards", "settings", "admin_link", "exports_basic",
-        }
-        self.assertEqual(lite_features, expected_features)
-        # Verify missing features
-        self.assertNotIn("recurring", lite_features)
-        self.assertNotIn("ledger", lite_features)
-        self.assertNotIn("net_income", lite_features)
-        self.assertNotIn("exports_advanced", lite_features)
+    def test_demo_environment_loads_lite(self):
+        self.assert_lite_settings("demo")
 
-    def test_gates_unknown_edition_defaults_to_demo(self):
-        """T-05: Unknown edition should default to demo features."""
-        from finanzas.product import edition_features
-        unknown_features = edition_features("unknown")
-        demo_features = edition_features("demo")
-        self.assertEqual(unknown_features, demo_features)
+    def test_pro_environment_loads_lite(self):
+        self.assert_lite_settings("pro")
+
+    def test_personal_environment_loads_lite(self):
+        self.assert_lite_settings("personal")
+
+    def test_lite_environment_loads_lite(self):
+        self.assert_lite_settings("lite")
+
+    def test_unknown_environment_loads_lite(self):
+        self.assert_lite_settings("unknown")
 
     # T-06: test_migrations_forward_backward lives in
     # ``Phase3PostgresIntegrationTests`` (TransactionTestCase) below.
@@ -1960,7 +1834,7 @@ class Phase3TestHardeningTests(TestCase):
 
         try:
             # Patch environment to simulate production with locmem cache
-            with patch.dict("os.environ", {"DJANGO_DEBUG": "0", "DJANGO_CACHE_BACKEND": "locmem", "DJANGO_ALLOWED_HOSTS": "testserver"}):
+            with patch.dict("os.environ", {"DJANGO_DEBUG": "0", "DJANGO_SECRET_KEY": "synthetic-test-key-" * 4, "DJANGO_CACHE_BACKEND": "locmem", "DJANGO_ALLOWED_HOSTS": "testserver"}):
                 # Reload the settings module to trigger validation
                 import importlib
                 importlib.reload(settings_module)

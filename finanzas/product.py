@@ -7,101 +7,19 @@ from django.contrib import messages
 from django.shortcuts import redirect
 
 
-EDITION_LABELS = {
-    "demo": "Demo",
-    "lite": "Lite",
-    "pro": "Pro",
-    "personal": "Personal",
-}
-
-EDITION_FEATURES = {
-    "demo": {
-        "reports",
-        "transactions",
-        "invoices",
-        "recurring",
-        "subscriptions",
-        "credit_cards",
-        "ledger",
-        "net_income",
-        "settings",
-        "admin_link",
-        "exports_basic",
-        "exports_advanced",
-    },
-    "pro": {
-        "reports",
-        "transactions",
-        "invoices",
-        "recurring",
-        "subscriptions",
-        "credit_cards",
-        "ledger",
-        "net_income",
-        "settings",
-        "admin_link",
-        "exports_basic",
-        "exports_advanced",
-    },
-    "personal": {
-        "reports",
-        "transactions",
-        "invoices",
-        "recurring",
-        "subscriptions",
-        "credit_cards",
-        "ledger",
-        "net_income",
-        "settings",
-        "admin_link",
-        "exports_basic",
-        "exports_advanced",
-    },
-    "lite": {
-        "reports",
-        "transactions",
-        "invoices",
-        "subscriptions",
-        "credit_cards",
-        "settings",
-        "admin_link",
-        "exports_basic",
-    },
-}
-
-
-def normalize_edition(value):
-    """Normalize an environment edition name to a supported edition key."""
-    edition = (value or "demo").strip().lower()
-    return edition if edition in EDITION_FEATURES else "demo"
-
-
-def edition_features(value):
-    """Return the enabled feature set for an edition key."""
-    return set(EDITION_FEATURES[normalize_edition(value)])
-
-
-def edition_label(value):
-    """Return a display label for an edition key."""
-    return EDITION_LABELS.get(normalize_edition(value), "Demo")
+LITE_FEATURES = frozenset({
+    "reports", "transactions", "invoices", "subscriptions", "credit_cards",
+    "settings", "admin_link", "exports_basic",
+})
 
 
 def feature_enabled(name):
     """Check whether the current settings enable a feature."""
-    return name in set(getattr(settings, "APP_FEATURES", set()))
+    return name in LITE_FEATURES and name in settings.APP_FEATURES
 
 
 def edition_payload():
-    """Build template context metadata for the active edition."""
-    edition = normalize_edition(getattr(settings, "APP_EDITION", "demo"))
-    return {
-        "key": edition,
-        "label": edition_label(edition),
-        "is_demo": edition == "demo",
-        "is_lite": edition == "lite",
-        "is_pro": edition == "pro",
-        "is_personal": edition == "personal",
-    }
+    return {"key": "lite", "label": "Lite"}
 
 
 def require_feature(name):

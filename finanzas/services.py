@@ -217,7 +217,7 @@ def dashboard_summary(user):
     liabilities = account_liabilities + credit_card_debt_total(user)
 
     upcoming = (
-        RecurringPayment.objects.filter(user=user, is_active=True, next_due_date__gte=today)
+        RecurringPayment.objects.filter(user=user, is_subscription=True, is_active=True, next_due_date__gte=today)
         .select_related("account", "category")
         .order_by("next_due_date", "name")[:6]
     )

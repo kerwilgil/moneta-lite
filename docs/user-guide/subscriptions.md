@@ -16,7 +16,7 @@ Ver cuánto cuestan al mes tus servicios activos y su proyección, para detectar
 
 ## Acciones
 
-Añadir desde presets o manualmente. Filtrar por categoría. Exportar a CSV.
+Registrar servicios manualmente o usar una plantilla de seguro. Actualizar el próximo cobro y filtrar por estado.
 
 ## Notas
 

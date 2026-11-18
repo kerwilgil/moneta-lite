@@ -16,8 +16,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction as db_transaction
 from django.utils import timezone
 
-from finanzas.accounting import rebuild_account_balances, sync_transaction_journal
-from finanzas.models import Account, Category, FinancialTransaction
+from finanzas.accounting import lock_financial_user, rebuild_account_balances, sync_transaction_journal
+from finanzas.models import Account, Category, CreditCard, FinancialTransaction
 from finanzas.intelligence.imports.models import (
     ImportBatch,
     TransactionDraft,
@@ -224,6 +224,7 @@ def _resolve_category(user, value, label="Categoria"):
 # --------------------------------------------------------------------------- #
 @db_transaction.atomic
 def create_import_batch(user, *, source, external_batch_id=None, metadata=None):
+    lock_financial_user(user)
     source = (source or "").strip()
     if not source:
         raise ValidationFailed("source es obligatorio.")
@@ -295,6 +296,9 @@ def create_transaction_draft(
     link it; ``"raise"`` -> raise :class:`DuplicateDraft`; ``"skip"`` -> return
     the existing draft untouched.
     """
+    # Serialize lookup + insertion, including retries after a lost response.
+    # Acquire the same user lock as UI financial writes before any row locks.
+    lock_financial_user(user)
     source = (source or "").strip()
     if not source:
         raise ValidationFailed("source es obligatorio.")
@@ -372,6 +376,14 @@ def create_transaction_draft(
 # --------------------------------------------------------------------------- #
 # update
 # --------------------------------------------------------------------------- #
+_UNSET = object()
+
+
+def _require_reviewer(draft, reviewer):
+    if reviewer is None or reviewer.pk != draft.user_id or not reviewer.is_active:
+        raise OwnershipError("El revisor debe ser el propietario activo del borrador.")
+
+
 _UPDATABLE = {
     "merchant", "description", "amount", "currency", "transaction_date",
     "transaction_type", "confidence", "external_id",
@@ -379,14 +391,17 @@ _UPDATABLE = {
 
 
 @db_transaction.atomic
-def update_draft(draft, *, reviewer=None, account=None, destination_account=None,
-                 suggested_category=None, **fields):
+def update_draft(draft, *, reviewer=None, account=None, destination_account=_UNSET,
+                 suggested_category=_UNSET, **fields):
+    _require_reviewer(draft, reviewer)
+    lock_financial_user(reviewer)
     draft = (
         # Lock only the draft row (consistent with approve/reject).
         TransactionDraft.objects.select_for_update(of=("self",))
         .select_related("account")
         .get(pk=draft.pk)
     )
+    _require_reviewer(draft, reviewer)
     if draft.status != TransactionDraft.Status.PENDING:
         raise InvalidTransition("Solo se pueden editar borradores pendientes.")
 
@@ -415,11 +430,11 @@ def update_draft(draft, *, reviewer=None, account=None, destination_account=None
 
     if account is not None:
         draft.account = _resolve_account(user, account, "Cuenta")
-    if destination_account is not None:
+    if destination_account is not _UNSET:
         draft.destination_account = _resolve_account(
             user, destination_account, "Cuenta destino"
         )
-    if suggested_category is not None:
+    if suggested_category is not _UNSET:
         draft.suggested_category = _resolve_category(user, suggested_category)
 
     draft.fingerprint = draft.compute_fingerprint()
@@ -444,6 +459,8 @@ def approve_draft(draft, *, reviewer, category=None, account=None,
     Idempotent: a second call on an already-approved draft returns the same
     transaction and performs no further mutation.
     """
+    _require_reviewer(draft, reviewer)
+    lock_financial_user(reviewer)
     locked = (
         # ``of=("self",)`` locks only the draft row. Without it PostgreSQL
         # rejects ``FOR UPDATE`` because ``select_related`` LEFT-joins the
@@ -452,6 +469,7 @@ def approve_draft(draft, *, reviewer, category=None, account=None,
         .select_related("account", "destination_account", "suggested_category")
         .get(pk=draft.pk)
     )
+    _require_reviewer(locked, reviewer)
 
     if locked.status == TransactionDraft.Status.APPROVED:
         if locked.transaction_id:
@@ -479,11 +497,22 @@ def approve_draft(draft, *, reviewer, category=None, account=None,
         raise OwnershipError("La cuenta destino no pertenece al usuario.")
     if cat is not None and cat.user_id != user.id:
         raise OwnershipError("La categoria no pertenece al usuario.")
+    if validate_currency(locked.currency) != validate_currency(acc.currency):
+        raise ValidationFailed("La moneda del borrador debe coincidir con la cuenta; no hay conversion automatica.")
+    card = None
+    if ttype == FinancialTransaction.TransactionType.CARD_PAYMENT:
+        # The draft's destination is the card account, not an ordinary transfer.
+        # Resolve it only within the owner; the transaction core uses its
+        # dedicated related_credit_card relation for payments and balance math.
+        card = CreditCard.objects.filter(user=user, account=dest).first() if dest else None
+        if card is None:
+            raise ValidationFailed("Selecciona la cuenta de la tarjeta pagada como cuenta destino.")
 
     tx = FinancialTransaction(
         user=user,
         account=acc,
         destination_account=dest if ttype == FinancialTransaction.TransactionType.TRANSFER else None,
+        related_credit_card=card,
         category=cat,
         transaction_type=ttype,
         description=locked.description,
@@ -493,7 +522,10 @@ def approve_draft(draft, *, reviewer, category=None, account=None,
         status=FinancialTransaction.Status.CLEARED,
         notes=f"Importado desde {locked.source}",
     )
-    tx.full_clean(exclude=["journal_entry"])
+    try:
+        tx.full_clean(exclude=["journal_entry"])
+    except ValidationError as exc:
+        raise ValidationFailed("; ".join(exc.messages)) from exc
     tx.save()
 
     sync_transaction_journal(tx)
@@ -514,7 +546,10 @@ def approve_draft(draft, *, reviewer, category=None, account=None,
 
 @db_transaction.atomic
 def reject_draft(draft, *, reviewer, reason=""):
+    _require_reviewer(draft, reviewer)
+    lock_financial_user(reviewer)
     locked = TransactionDraft.objects.select_for_update().get(pk=draft.pk)
+    _require_reviewer(locked, reviewer)
     if locked.status == TransactionDraft.Status.REJECTED:
         return locked
     if locked.status != TransactionDraft.Status.PENDING:
@@ -536,7 +571,10 @@ def reject_draft(draft, *, reviewer, reason=""):
 
 @db_transaction.atomic
 def mark_draft_duplicate(draft, existing_draft, *, reviewer=None):
+    _require_reviewer(draft, reviewer)
+    lock_financial_user(reviewer)
     locked = TransactionDraft.objects.select_for_update().get(pk=draft.pk)
+    _require_reviewer(locked, reviewer)
     if locked.status not in {
         TransactionDraft.Status.PENDING, TransactionDraft.Status.DUPLICATE
     }:

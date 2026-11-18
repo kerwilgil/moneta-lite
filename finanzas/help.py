@@ -89,28 +89,10 @@ ARTICLES = (
         feature="subscriptions", guide="insurance",
     ),
     Article(
-        "recurrentes", _l("Pagos recurrentes"), _l("Uso diario"),
-        _l("Automatización de pagos periódicos con límites por lote."),
-        (_l("recurrente"), _l("automático"), _l("periódico"), _l("lote")),
-        feature="recurring", guide="recurring",
-    ),
-    Article(
         "reportes", _l("Reportes"), _l("Uso diario"),
         _l("Activos, pasivos, capital neto, flujo del mes y presupuesto por categoría."),
         (_l("reporte"), _l("presupuesto"), _l("categoría"), _l("capital neto")),
         feature="reports", guide="reports",
-    ),
-    Article(
-        "ingreso-neto", _l("Ingreso neto"), _l("Uso diario"),
-        _l("Simulación de salario neto y capacidad mensual de planificación."),
-        (_l("salario"), _l("neto"), _l("deducción"), _l("planificar")),
-        feature="net_income", guide="net-income",
-    ),
-    Article(
-        "libro-contable", _l("Libro contable"), _l("Uso diario"),
-        _l("Asientos de partida doble y su relación con los movimientos."),
-        (_l("contable"), _l("asiento"), _l("debe"), _l("haber"), _l("partida doble")),
-        feature="ledger", guide="ledger",
     ),
     Article(
         "importaciones", _l("Importaciones"), _l("Automatización e IA"),

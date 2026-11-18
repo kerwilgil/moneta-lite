@@ -5,9 +5,8 @@ from decimal import Decimal
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from django.forms import formset_factory
 
-from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, JournalEntry, RecurringPayment
+from .models import Account, Category, CreditCard, FinancialTransaction, Invoice, RecurringPayment
 
 
 class UserScopedModelForm(forms.ModelForm):
@@ -206,7 +205,7 @@ class RecurringPaymentForm(UserScopedModelForm):
 
     class Meta:
         model = RecurringPayment
-        fields = ["name", "account", "category", "transaction_type", "amount", "frequency", "next_due_date", "auto_create_transaction", "is_active"]
+        fields = ["name", "account", "category", "transaction_type", "amount", "frequency", "next_due_date", "is_active"]
         labels = {
             "name": "Nombre",
             "account": "Cuenta",
@@ -215,7 +214,6 @@ class RecurringPaymentForm(UserScopedModelForm):
             "amount": "Monto",
             "frequency": "Frecuencia",
             "next_due_date": "Proximo vencimiento",
-            "auto_create_transaction": "Crear movimiento automaticamente",
             "is_active": "Activo",
         }
         widgets = {
@@ -338,54 +336,6 @@ class CreditCardForm(UserScopedModelForm):
             if value is not None and value < 0:
                 self.add_error(field_name, "Este valor no puede ser negativo.")
         return cleaned_data
-
-
-class JournalEntryForm(UserScopedModelForm):
-    class Meta:
-        model = JournalEntry
-        fields = ["date", "description", "source", "posted"]
-        labels = {
-            "date": "Fecha",
-            "description": "Descripcion",
-            "source": "Origen",
-            "posted": "Publicado",
-        }
-        widgets = {
-            "date": forms.DateInput(attrs={"type": "date"}),
-        }
-
-
-class JournalLineForm(forms.Form):
-    account = forms.ModelChoiceField(queryset=Account.objects.none(), label="Cuenta")
-    memo = forms.CharField(max_length=180, required=False, label="Memo")
-    debit = forms.DecimalField(max_digits=14, decimal_places=2, required=False, min_value=0, label="Debe")
-    credit = forms.DecimalField(max_digits=14, decimal_places=2, required=False, min_value=0, label="Haber")
-
-    def __init__(self, *args, user=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["account"].queryset = Account.objects.filter(user=user, is_active=True)
-        for field in self.fields.values():
-            if isinstance(field.widget, forms.Select):
-                field.widget.attrs.setdefault("class", "form-select")
-            else:
-                field.widget.attrs.setdefault("class", "form-control")
-
-    def clean(self):
-        cleaned_data = super().clean()
-        debit = cleaned_data.get("debit") or Decimal("0.00")
-        credit = cleaned_data.get("credit") or Decimal("0.00")
-        account = cleaned_data.get("account")
-        if account and debit and credit:
-            raise forms.ValidationError("Una linea no puede tener Debe y Haber al mismo tiempo.")
-        if account and not debit and not credit:
-            raise forms.ValidationError("Indica un valor en Debe o Haber.")
-        return cleaned_data
-
-    def is_empty(self):
-        return not any(self.cleaned_data.get(field) for field in ("account", "memo", "debit", "credit"))
-
-
-JournalLineFormSet = formset_factory(JournalLineForm, extra=4, min_num=2, validate_min=False)
 
 
 class InitialSuperuserForm(forms.Form):

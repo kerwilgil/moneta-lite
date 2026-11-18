@@ -125,7 +125,7 @@ inverso autenticado con HTTPS.
 | `moneta.get_income_summary` | Resumen de ingresos. |
 | `moneta.get_subscriptions` | Suscripciones activas. |
 | `moneta.get_credit_cards` | Tarjetas de crédito y uso. |
-| `moneta.get_upcoming_bills` | Próximos vencimientos. |
+| `moneta.get_upcoming_bills` | Próximos vencimientos de suscripciones y seguros. |
 | `moneta.get_categories` | Catálogo de categorías. |
 
 ### Borradores (`draft`)

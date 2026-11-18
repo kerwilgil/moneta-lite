@@ -368,7 +368,7 @@ def _h_upcoming_bills(user, args):
         raise InputInvalid("days debe estar entre 1 y 365.")
     until = timezone.localdate() + timedelta(days=days)
     qs = RecurringPayment.objects.filter(
-        user=user, is_active=True, next_due_date__lte=until
+        user=user, is_subscription=True, is_active=True, next_due_date__lte=until
     ).select_related("account", "category").order_by("next_due_date")
     limit, offset = _page_args(args)
     total = qs.count()
@@ -427,8 +427,10 @@ def _h_update_draft(user, args):
     updated = import_services.update_draft(
         draft, reviewer=user,
         account=args.get("account_id"),
-        destination_account=args.get("destination_account_id"),
-        suggested_category=args.get("category_id"),
+        **({"destination_account": args["destination_account_id"]}
+           if "destination_account_id" in args else {}),
+        **({"suggested_category": args["category_id"]}
+           if "category_id" in args else {}),
         **fields,
     )
     return {"draft": _draft(updated)}
@@ -545,7 +547,7 @@ READ_TOOLS = [
     },
     {
         "name": "moneta.get_upcoming_bills", "scope": SCOPE_READ,
-        "description": "Pagos recurrentes proximos a vencer.",
+        "description": "Próximos vencimientos de suscripciones y seguros.",
         "inputSchema": _schema(
             days={"type": "integer", "minimum": 1, "maximum": 365},
             limit={"type": "integer", "minimum": 1},
