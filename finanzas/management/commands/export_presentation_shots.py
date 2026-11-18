@@ -44,13 +44,6 @@ PAGES = [
         "eyebrow": "Recurring spend",
         "description": "Control visual del gasto recurrente y servicios activos.",
     },
-    {
-        "slug": "05-ingreso-neto",
-        "url_name": "finanzas:net_income",
-        "title": "Ingreso neto",
-        "eyebrow": "Planning",
-        "description": "Simulacion salarial y capacidad mensual real de planificacion.",
-    },
 ]
 
 
@@ -68,13 +61,6 @@ SOCIAL_VARIANTS = [
         "kicker": "Moneta / Suscripciones",
         "description": "Seguimiento visual de servicios activos, renovaciones y carga mensual.",
         "image_slug": "04-suscripciones",
-    },
-    {
-        "slug": "social-ingreso-neto",
-        "title": "Planifica con ingreso real, no estimado",
-        "kicker": "Moneta / Ingreso neto",
-        "description": "Simula salario neto, deducciones y capacidad mensual antes de comprometer gasto fijo.",
-        "image_slug": "05-ingreso-neto",
     },
 ]
 

@@ -36,6 +36,8 @@ class StaffIsolationTests(TestCase):
         response = self.client.get(reverse("admin:finanzas_financialtransaction_add"))
         form = response.context["adminform"].form
         self.assertNotIn("user", form.fields)
+        self.assertNotIn("journal_entry", form.fields)
+        self.assertNotIn("source_recurring", form.fields)
         self.assertEqual(list(form.fields["account"].queryset), [self.own])
 
     def test_forged_owner_and_foreign_account_cannot_be_posted(self):
@@ -90,3 +92,12 @@ class StaffIsolationTests(TestCase):
         for name, args in (("transaction_create", []), ("transaction_edit", [tx.pk])):
             self.assertEqual(self.client.get(reverse(f"finanzas:{name}", args=args)).status_code, 200)
         self.assertEqual(Account.objects.count(), before)
+
+    def test_commercial_admin_endpoints_are_absent_even_for_superusers(self):
+        operator = get_user_model().objects.create_superuser("operator")
+        self.client.force_login(operator)
+        for model in ("journalentry", "journalline", "recurringpayment"):
+            for suffix in ("", "add/", "1/change/"):
+                with self.subTest(model=model, suffix=suffix):
+                    response = self.client.get(f"/admin/finanzas/{model}/{suffix}", follow=True)
+                    self.assertEqual(response.status_code, 404)

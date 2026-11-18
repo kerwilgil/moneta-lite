@@ -17,10 +17,7 @@ dentro de la aplicación en **Ayuda** (`/ayuda/`) y como ayuda contextual
 - [credit-cards.md](credit-cards.md)
 - [subscriptions.md](subscriptions.md)
 - [insurance.md](insurance.md)
-- [recurring.md](recurring.md) — edición Pro
 - [reports.md](reports.md)
-- [net-income.md](net-income.md) — edición Pro
-- [ledger.md](ledger.md) — edición Pro
 
 ## Automatización e IA
 
@@ -37,7 +34,4 @@ dentro de la aplicación en **Ayuda** (`/ayuda/`) y como ayuda contextual
 
 ## Ediciones
 
-Moneta Lite incluye todo lo marcado como "Uso diario" salvo los módulos Pro
-(`recurring`, `net-income`, `ledger`), más `import-queue`, `mcp` y `ai`. La
-edición Pro añade los módulos avanzados. La edición activa se fija con
-`SAAS_EDITION` en el servidor.
+Esta guía describe el paquete Moneta Lite. Consulta la [matriz Lite/Pro](../../README.md#lite-vs-pro) para comparar ediciones.

@@ -15,8 +15,9 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
-from finanzas.models import Account, Category, FinancialTransaction
+from finanzas.models import Account, Category, FinancialTransaction, RecurringPayment
 from finanzas.intelligence.imports import services as import_services
 from finanzas.intelligence.imports.models import TransactionDraft
 from finanzas.intelligence.mcp import ratelimit, server as mcp_server, tools
@@ -419,6 +420,45 @@ class ForbiddenToolsTests(McpBase):
         draft = [t for t in tools.ALL_TOOLS if t["scope"] == SCOPE_DRAFT]
         self.assertEqual(len(read), 10)
         self.assertEqual(len(draft), 5)
+
+    def test_all_fifteen_tools_dispatch_in_lite(self):
+        before = FinancialTransaction.objects.count()
+        batch = tools.execute(self.draft_token_obj, "moneta.create_import_batch", {"source": "gmail"})
+        draft = tools.execute(
+            self.draft_token_obj, "moneta.create_transaction_draft",
+            self.draft_args(batch_id=batch["batch"]["id"]),
+        )["draft"]
+        payloads = {
+            "moneta.search_transactions": {"query": "gasto"},
+            "moneta.update_draft": {"draft_id": draft["id"], "description": "Cafe revisado"},
+            "moneta.reject_draft": {"draft_id": draft["id"]},
+        }
+        for spec in tools.ALL_TOOLS:
+            name = spec["name"]
+            if name in {"moneta.create_import_batch", "moneta.create_transaction_draft"}:
+                continue
+            with self.subTest(tool=name):
+                self.assertTrue(tools.execute(self.draft_token_obj, name, payloads.get(name, {})))
+        self.assertEqual(FinancialTransaction.objects.count(), before)
+
+    def test_upcoming_bills_only_returns_owned_subscriptions(self):
+        for user, account, name, is_subscription in (
+            (self.user, self.acc, "Legacy automatic", False),
+            (self.user, self.acc, "Manual subscription", True),
+            (self.other, self.other_acc, "Other subscription", True),
+        ):
+            RecurringPayment.objects.create(
+                user=user, account=account, name=name, amount=Decimal("12"),
+                next_due_date=timezone.localdate(), is_subscription=is_subscription,
+            )
+        for tool, key in (
+            ("moneta.get_subscriptions", "subscriptions"),
+            ("moneta.get_upcoming_bills", "upcoming"),
+        ):
+            with self.subTest(tool=tool):
+                result = tools.execute(self.read_token_obj, tool, {})
+                self.assertEqual([item["name"] for item in result[key]], ["Manual subscription"])
+                self.assertEqual(result["total"], 1)
 
     def test_no_tool_mutates_financial_core_directly(self):
         before = FinancialTransaction.objects.count()

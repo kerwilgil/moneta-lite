@@ -7,7 +7,7 @@ import secrets
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
 
-from finanzas.product import edition_features, normalize_edition
+from finanzas.product import LITE_FEATURES
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -47,9 +47,9 @@ if len(SECRET_KEY) < 50:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY debe tener al menos 50 caracteres.")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
-APP_VERSION = "0.3.0"
-APP_EDITION = normalize_edition(os.getenv("SAAS_EDITION", "demo"))
-APP_FEATURES = edition_features(APP_EDITION)
+APP_VERSION = "0.3.1"
+APP_EDITION = "lite"
+APP_FEATURES = LITE_FEATURES
 APP_NAME = os.getenv("SAAS_APP_NAME", "Moneta")
 APP_DESCRIPTION_ES = os.getenv("SAAS_APP_DESCRIPTION_ES", "Moneta - finanzas personales, contabilidad y flujo de caja.")
 APP_DESCRIPTION_EN = os.getenv("SAAS_APP_DESCRIPTION_EN", "Moneta - personal finance, accounting and cash flow.")
@@ -87,15 +87,9 @@ if MONETA_WEB_SETUP_ENABLED and len(MONETA_SETUP_TOKEN) < 32:
     )
 MONETA_LOGIN_MAX_ATTEMPTS = env_int("MONETA_LOGIN_MAX_ATTEMPTS", 10)
 MONETA_LOGIN_LOCKOUT_SECONDS = env_int("MONETA_LOGIN_LOCKOUT_SECONDS", 900)
-MONETA_RECURRING_BATCH_SIZE = env_int("MONETA_RECURRING_BATCH_SIZE", 100)
-MONETA_RECURRING_MAX_CYCLES = env_int("MONETA_RECURRING_MAX_CYCLES", 12)
-MONETA_RECURRING_MAX_TOTAL_TRANSACTIONS = env_int("MONETA_RECURRING_MAX_TOTAL_TRANSACTIONS", 200)
 for setting_name, setting_value in (
     ("MONETA_LOGIN_MAX_ATTEMPTS", MONETA_LOGIN_MAX_ATTEMPTS),
     ("MONETA_LOGIN_LOCKOUT_SECONDS", MONETA_LOGIN_LOCKOUT_SECONDS),
-    ("MONETA_RECURRING_BATCH_SIZE", MONETA_RECURRING_BATCH_SIZE),
-    ("MONETA_RECURRING_MAX_CYCLES", MONETA_RECURRING_MAX_CYCLES),
-    ("MONETA_RECURRING_MAX_TOTAL_TRANSACTIONS", MONETA_RECURRING_MAX_TOTAL_TRANSACTIONS),
 ):
     if setting_value < 1:
         raise ImproperlyConfigured(f"{setting_name} debe ser mayor que cero.")

@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] — Technical audit of v0.3.0
+## [0.3.1] — Unreleased
 
 ### Fixed
 
@@ -10,7 +10,7 @@
   approvals as review errors, and allow clearing optional draft relations.
 - Resolve imported card payments through the owner's destination card account.
 - Serialize PostgreSQL imports before deduplication and financial mutations;
-  align recurring execution and transaction deletion with the same lock order.
+  use the same lock order for transaction deletion.
 - Keep transaction form GET requests free of system-account creation.
 - Give subprocess tests a stable synthetic key without relying on a local `.env`.
 
@@ -19,9 +19,16 @@
 - Financial, admin isolation, timeout/rollback and concurrent import regressions.
 - CI for Python 3.12–3.14 with SQLite/PostgreSQL, deploy checks, dependency audit
   and redacted Gitleaks scans of the public tree and history.
-- Audit evidence and a blocking Lite/Pro physical-separation proposal in
-  `docs/audit-v0.3.0.md`. Edition extraction requires owner review; no commercial
-  source has been moved and the v0.3.0 tag and release remain unchanged.
+- CI checks the Lite distribution file manifest and compares synthetic data
+  before and after upgrading from the v0.3.0 tag.
+
+### Removed from the Lite distribution
+
+- Automatic recurring payment execution, the manual ledger UI and admin,
+  salary simulation, the preset service catalog and advanced CSV exports.
+- Runtime edition switching. Legacy recurring and journal data remains in the
+  database. Manual subscriptions, insurance, basic CSV and all 15 MCP tools
+  remain available.
 
 ## [0.3.0] — 2026-09-10 (Intelligence & Interoperability)
 
