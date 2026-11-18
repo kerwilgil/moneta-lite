@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased] — Technical audit of v0.3.0
+
+### Fixed
+
+- Scope Django admin financial records and related choices to ordinary staff
+  owners; keep transaction and invoice accounting changes atomic in admin.
+- Enforce draft reviewer ownership, preserve currency integrity, handle invalid
+  approvals as review errors, and allow clearing optional draft relations.
+- Resolve imported card payments through the owner's destination card account.
+- Serialize PostgreSQL imports before deduplication and financial mutations;
+  align recurring execution and transaction deletion with the same lock order.
+- Keep transaction form GET requests free of system-account creation.
+- Give subprocess tests a stable synthetic key without relying on a local `.env`.
+
+### Added
+
+- Financial, admin isolation, timeout/rollback and concurrent import regressions.
+- CI for Python 3.12–3.14 with SQLite/PostgreSQL, deploy checks, dependency audit
+  and redacted Gitleaks scans of the public tree and history.
+- Audit evidence and a blocking Lite/Pro physical-separation proposal in
+  `docs/audit-v0.3.0.md`. Edition extraction requires owner review; no commercial
+  source has been moved and the v0.3.0 tag and release remain unchanged.
+
 ## [0.3.0] — 2026-09-10 (Intelligence & Interoperability)
 
 _Release estable validado tras la auditoría final posterior a Phase 8._

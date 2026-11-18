@@ -204,11 +204,15 @@ class FinancialTransaction(TimeStampedModel):
                 errors["destination_account"] = "Selecciona una cuenta destino."
             elif self.destination_account_id == self.account_id:
                 errors["destination_account"] = "La cuenta destino debe ser distinta."
+            elif self.account_id and self.destination_account.currency.upper() != self.account.currency.upper():
+                errors["destination_account"] = "Las cuentas deben usar la misma moneda; no hay conversion automatica."
         elif self.destination_account_id:
             errors["destination_account"] = "Solo las transferencias pueden tener cuenta destino."
         if self.transaction_type == self.TransactionType.CARD_PAYMENT:
             if not self.related_credit_card_id:
                 errors["related_credit_card"] = "Selecciona la tarjeta pagada."
+            elif self.account_id and self.related_credit_card.account.currency.upper() != self.account.currency.upper():
+                errors["related_credit_card"] = "La tarjeta y la cuenta deben usar la misma moneda."
         elif self.related_credit_card_id:
             errors["related_credit_card"] = "Solo los pagos de tarjeta pueden vincular una tarjeta."
         if errors:

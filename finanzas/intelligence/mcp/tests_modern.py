@@ -44,6 +44,8 @@ _DB_OVERRIDE_ENV_KEYS = ("DB_ENGINE", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSW
 def _sqlite_subprocess_env(**overrides):
     env = {k: v for k, v in os.environ.items() if k not in _DB_OVERRIDE_ENV_KEYS}
     env["DJANGO_SETTINGS_MODULE"] = "config.settings"
+    # Both setup and server subprocesses must hash tokens with the same key.
+    env.setdefault("DJANGO_SECRET_KEY", "synthetic-mcp-subprocess-test-key-" * 3)
     env.update(overrides)
     return env
 from finanzas.intelligence.mcp import tools as tool_registry

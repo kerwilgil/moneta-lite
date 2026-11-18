@@ -427,8 +427,10 @@ def _h_update_draft(user, args):
     updated = import_services.update_draft(
         draft, reviewer=user,
         account=args.get("account_id"),
-        destination_account=args.get("destination_account_id"),
-        suggested_category=args.get("category_id"),
+        **({"destination_account": args["destination_account_id"]}
+           if "destination_account_id" in args else {}),
+        **({"suggested_category": args["category_id"]}
+           if "category_id" in args else {}),
         **fields,
     )
     return {"draft": _draft(updated)}

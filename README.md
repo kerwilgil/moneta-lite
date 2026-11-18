@@ -10,7 +10,7 @@
     <img alt="Django" src="https://img.shields.io/badge/Django-6.0-0b5f3a?style=flat-square&logo=django&logoColor=white">
     <img alt="Database" src="https://img.shields.io/badge/DB-SQLite%20%7C%20PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white">
     <img alt="MCP" src="https://img.shields.io/badge/MCP-2026--07--28-6f42c1?style=flat-square">
-    <img alt="Tests" src="https://img.shields.io/badge/tests-182%20passing-2ea44f?style=flat-square">
+    <a href="https://github.com/kerwilgil/moneta-lite/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/kerwilgil/moneta-lite/actions/workflows/ci.yml/badge.svg"></a>
     <img alt="i18n" src="https://img.shields.io/badge/i18n-ES%20%7C%20EN-1f6feb?style=flat-square">
     <img alt="License" src="https://img.shields.io/badge/License-MIT-c9a227?style=flat-square">
   </p>

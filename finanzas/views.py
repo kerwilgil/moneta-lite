@@ -26,7 +26,6 @@ from django.views.decorators.http import require_http_methods
 from .accounting import (
     delete_invoice_journal,
     delete_transaction_journal,
-    get_transaction_system_accounts,
     lock_financial_user,
     rebuild_account_balances,
     sync_credit_card_account_balance,
@@ -812,7 +811,6 @@ def transaction_list(request):
 
 @login_required
 def transaction_create(request):
-    system_accounts = get_transaction_system_accounts(request.user)
     return save_user_form(
         request,
         TransactionForm,
@@ -822,7 +820,7 @@ def transaction_create(request):
         "Registra ingresos, gastos, pagos de tarjeta, cobros o transferencias.",
         "Guardar movimiento",
         extra_context=category_helper_context(),
-        after_save=lambda obj: (sync_transaction_journal(obj, _system_accounts=system_accounts), rebuild_account_balances(request.user, force_account_ids=[obj.account_id, obj.destination_account_id, obj.related_credit_card.account_id if obj.related_credit_card else None])),
+        after_save=lambda obj: (sync_transaction_journal(obj), rebuild_account_balances(request.user, force_account_ids=[obj.account_id, obj.destination_account_id, obj.related_credit_card.account_id if obj.related_credit_card else None])),
     )
 
 
@@ -835,8 +833,6 @@ def transaction_edit(request, pk):
     if instance.related_credit_card_id and instance.related_credit_card:
         original_account_ids.add(instance.related_credit_card.account_id)
 
-    system_accounts = get_transaction_system_accounts(request.user)
-
     def after_transaction_edit(obj):
         account_ids = set(original_account_ids)
         account_ids.add(obj.account_id)
@@ -844,7 +840,7 @@ def transaction_edit(request, pk):
             account_ids.add(obj.destination_account_id)
         if obj.related_credit_card_id and obj.related_credit_card:
             account_ids.add(obj.related_credit_card.account_id)
-        sync_transaction_journal(obj, _system_accounts=system_accounts)
+        sync_transaction_journal(obj)
         rebuild_account_balances(request.user, force_account_ids=account_ids)
 
     return save_user_form(
@@ -873,6 +869,7 @@ def transaction_delete(request, pk):
             account_ids.add(instance.related_credit_card.account_id)
         try:
             with transaction.atomic():
+                lock_financial_user(request.user)
                 delete_transaction_journal(instance)
                 instance.delete()
                 rebuild_account_balances(request.user, force_account_ids=account_ids)

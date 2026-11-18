@@ -8,7 +8,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from .accounting import rebuild_account_balances, sync_transaction_journal
+from .accounting import lock_financial_user, rebuild_account_balances, sync_transaction_journal
 from .models import FinancialTransaction, RecurringPayment
 
 logger = logging.getLogger(__name__)
@@ -67,6 +67,7 @@ def _process_single_recurring(recurring, run_date, max_cycles=None):
     cycles = 0
 
     with transaction.atomic():
+        lock_financial_user(recurring.user)
         recurring = (
             # ``of=("self",)`` locks only the recurring row; PostgreSQL rejects
             # ``FOR UPDATE`` over the nullable ``category`` LEFT join otherwise.

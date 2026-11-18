@@ -1960,7 +1960,7 @@ class Phase3TestHardeningTests(TestCase):
 
         try:
             # Patch environment to simulate production with locmem cache
-            with patch.dict("os.environ", {"DJANGO_DEBUG": "0", "DJANGO_CACHE_BACKEND": "locmem", "DJANGO_ALLOWED_HOSTS": "testserver"}):
+            with patch.dict("os.environ", {"DJANGO_DEBUG": "0", "DJANGO_SECRET_KEY": "synthetic-test-key-" * 4, "DJANGO_CACHE_BACKEND": "locmem", "DJANGO_ALLOWED_HOSTS": "testserver"}):
                 # Reload the settings module to trigger validation
                 import importlib
                 importlib.reload(settings_module)

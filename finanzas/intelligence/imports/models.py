@@ -51,7 +51,10 @@ def canonical_amount(value):
         raise ValueError(f"Monto invalido: {value!r}") from exc
     if not dec.is_finite():
         raise ValueError("El monto no puede ser NaN o infinito.")
-    return dec.quantize(AMOUNT_QUANT)
+    try:
+        return dec.quantize(AMOUNT_QUANT)
+    except InvalidOperation as exc:
+        raise ValueError("El monto excede la precision permitida.") from exc
 
 
 class ImportBatch(models.Model):
