@@ -5,7 +5,6 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST = ROOT / "scripts/lite-files.txt"
 COMMERCIAL_SIGNATURES = (
     r"execute_due_recurrings_for_user|MONETA_RECURRING_|subscription_run_now|"
     r"recurring_run_now|run_recurring\.py|salary_calculator\.js|journal_form\.js|"
@@ -17,7 +16,10 @@ COMMERCIAL_SIGNATURES = (
 
 
 def main():
-    expected = set(MANIFEST.read_text(encoding="utf-8").splitlines())
+    manifest = subprocess.check_output(
+        ["git", "show", ":scripts/lite-files.txt"], cwd=ROOT, encoding="utf-8",
+    )
+    expected = set(manifest.splitlines())
     index = subprocess.check_output(["git", "ls-files", "--stage", "-z"], cwd=ROOT)
     actual = set()
     unexpected_modes = []
